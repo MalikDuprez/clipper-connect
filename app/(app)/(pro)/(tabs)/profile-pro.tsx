@@ -3,210 +3,598 @@ import {
   View, 
   Text, 
   ScrollView, 
-  Image,
   Pressable, 
   StyleSheet,
-  Alert,
+  Modal,
+  Animated,
+  Dimensions,
+  Image,
+  PanResponder,
+  TextInput,
+  Switch,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useState, useRef, useEffect } from "react";
+import { router } from "expo-router";
 
+const { height, width } = Dimensions.get("window");
+
+// ============================================
+// THEME
+// ============================================
 const theme = {
-  background: "#FFFFFF",
+  black: "#000000",
+  white: "#FFFFFF",
+  card: "#F8FAFC",
   text: "#000000",
-  textSecondary: "#666666",
-  textMuted: "#999999",
-  border: "#E5E5E5",
-  card: "#F5F5F5",
-  info: "#1976D2",
-  error: "#E53935",
-  errorLight: "#FFEBEE",
+  textSecondary: "#64748B",
+  textMuted: "#94A3B8",
+  accent: "#3B82F6",
+  accentLight: "#EFF6FF",
+  success: "#10B981",
+  successLight: "#ECFDF5",
+  warning: "#F59E0B",
+  warningLight: "#FEF3C7",
+  error: "#EF4444",
+  errorLight: "#FEF2F2",
+  border: "#E2E8F0",
 };
 
 // ============================================
 // DONNÉES MOCK
 // ============================================
-const MOCK_PRO_PROFILE = {
-  name: "Marco Rossi",
-  specialty: "Barbier",
-  location: "Paris 11e",
+const MOCK_PROFILE = {
+  id: "1",
+  name: "Alexandre Martin",
+  photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200",
+  bio: "Coiffeur passionné avec 8 ans d'expérience. Spécialisé dans les coupes homme et les dégradés américains.",
   rating: 4.8,
-  reviewCount: 127,
-  image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200",
-  verified: true,
+  reviewsCount: 127,
+  phone: "06 12 34 56 78",
+  email: "alexandre.martin@email.com",
+  isOnline: true,
+  address: "15 Rue de la Coiffure, 75011 Paris",
+  radius: 10, // km pour les déplacements
+  canTravel: true,
 };
 
-const INFO_MENU = [
-  { icon: "create-outline", label: "Bio et présentation" },
-  { icon: "cash-outline", label: "Tarifs et services" },
-  { icon: "ribbon-outline", label: "Spécialités" },
-  { icon: "map-outline", label: "Zone d'intervention" },
-  { icon: "time-outline", label: "Horaires de travail" },
+const MOCK_SERVICES = [
+  { id: "1", name: "Coupe homme", price: 25, duration: 30 },
+  { id: "2", name: "Coupe femme", price: 35, duration: 45 },
+  { id: "3", name: "Dégradé américain", price: 30, duration: 40 },
+  { id: "4", name: "Coloration", price: 65, duration: 90 },
+  { id: "5", name: "Barbe", price: 15, duration: 20 },
+  { id: "6", name: "Coupe + Barbe", price: 35, duration: 45 },
+  { id: "7", name: "Brushing", price: 25, duration: 30 },
 ];
 
-const REVENUE_MENU = [
-  { icon: "card-outline", label: "Informations bancaires" },
-  { icon: "receipt-outline", label: "Historique des paiements" },
-  { icon: "stats-chart-outline", label: "Statistiques détaillées" },
-];
+// ============================================
+// COMPOSANTS
+// ============================================
+const ProfileHeader = ({ profile, onEditPress, onSettingsPress }: { 
+  profile: typeof MOCK_PROFILE; 
+  onEditPress: () => void;
+  onSettingsPress: () => void;
+}) => (
+  <View style={styles.profileHeader}>
+    <Pressable style={styles.settingsButton} onPress={onSettingsPress}>
+      <Ionicons name="settings-outline" size={24} color={theme.white} />
+    </Pressable>
+    <View style={styles.profileImageContainer}>
+      <Image source={{ uri: profile.photo }} style={styles.profileImage} />
+      <View style={[styles.onlineIndicator, { backgroundColor: profile.isOnline ? theme.success : theme.textMuted }]} />
+    </View>
+    <Text style={styles.profileName}>{profile.name}</Text>
+    <View style={styles.ratingContainer}>
+      <Ionicons name="star" size={18} color="#FBBF24" />
+      <Text style={styles.ratingText}>{profile.rating}</Text>
+      <Text style={styles.reviewsText}>({profile.reviewsCount} avis)</Text>
+    </View>
+    <Pressable style={styles.editProfileButton} onPress={onEditPress}>
+      <Ionicons name="create-outline" size={18} color={theme.white} />
+      <Text style={styles.editProfileButtonText}>Modifier le profil</Text>
+    </Pressable>
+  </View>
+);
+
+const SectionHeader = ({ title, actionText, onAction }: { title: string; actionText?: string; onAction?: () => void }) => (
+  <View style={styles.sectionHeader}>
+    <Text style={styles.sectionTitle}>{title}</Text>
+    {actionText && (
+      <Pressable onPress={onAction}>
+        <Text style={styles.sectionAction}>{actionText}</Text>
+      </Pressable>
+    )}
+  </View>
+);
+
+const ServiceItem = ({ service, onPress }: { service: typeof MOCK_SERVICES[0]; onPress: () => void }) => (
+  <Pressable style={styles.serviceItem} onPress={onPress}>
+    <View style={styles.serviceInfo}>
+      <Text style={styles.serviceName}>{service.name}</Text>
+      <Text style={styles.serviceDuration}>{service.duration} min</Text>
+    </View>
+    <View style={styles.serviceRight}>
+      <Text style={styles.servicePrice}>{service.price}€</Text>
+      <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+    </View>
+  </Pressable>
+);
+
+const SettingItem = ({ icon, label, value, onPress, isSwitch, switchValue, onSwitchChange }: {
+  icon: string;
+  label: string;
+  value?: string;
+  onPress?: () => void;
+  isSwitch?: boolean;
+  switchValue?: boolean;
+  onSwitchChange?: (value: boolean) => void;
+}) => (
+  <Pressable style={styles.settingItem} onPress={onPress} disabled={isSwitch}>
+    <View style={styles.settingLeft}>
+      <View style={styles.settingIconContainer}>
+        <Ionicons name={icon as any} size={20} color={theme.accent} />
+      </View>
+      <Text style={styles.settingLabel}>{label}</Text>
+    </View>
+    {isSwitch ? (
+      <Switch
+        value={switchValue}
+        onValueChange={onSwitchChange}
+        trackColor={{ false: theme.border, true: theme.accentLight }}
+        thumbColor={switchValue ? theme.accent : theme.textMuted}
+      />
+    ) : (
+      <View style={styles.settingRight}>
+        {value && <Text style={styles.settingValue}>{value}</Text>}
+        <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+      </View>
+    )}
+  </Pressable>
+);
+
+// ============================================
+// MODALE MODIFIER PROFIL
+// ============================================
+const EditProfileModal = ({ visible, onClose, profile }: {
+  visible: boolean;
+  onClose: () => void;
+  profile: typeof MOCK_PROFILE;
+}) => {
+  const insets = useSafeAreaInsets();
+  const translateY = useRef(new Animated.Value(height)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+  const [name, setName] = useState(profile.name);
+  const [bio, setBio] = useState(profile.bio);
+  const [phone, setPhone] = useState(profile.phone);
+  const [email, setEmail] = useState(profile.email);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gesture) => gesture.dy > 5,
+      onPanResponderMove: (_, gesture) => {
+        if (gesture.dy > 0) translateY.setValue(gesture.dy);
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dy > 100 || gesture.vy > 0.5) {
+          handleClose();
+        } else {
+          Animated.spring(translateY, { toValue: 0, tension: 65, friction: 11, useNativeDriver: true }).start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (visible) {
+      setName(profile.name);
+      setBio(profile.bio);
+      setPhone(profile.phone);
+      setEmail(profile.email);
+      Animated.parallel([
+        Animated.spring(translateY, { toValue: 0, tension: 65, friction: 11, useNativeDriver: true }),
+        Animated.timing(backdropAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible]);
+
+  const handleClose = () => {
+    Animated.parallel([
+      Animated.timing(translateY, { toValue: height, duration: 250, useNativeDriver: true }),
+      Animated.timing(backdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => onClose());
+  };
+
+  const handleSave = () => {
+    console.log("Save profile:", { name, bio, phone, email });
+    handleClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
+      <View style={styles.modalContainer}>
+        <Animated.View style={[styles.backdrop, { opacity: backdropAnim }]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
+        </Animated.View>
+
+        <Animated.View style={[styles.modal, { transform: [{ translateY }], paddingBottom: insets.bottom + 20 }]}>
+          <View {...panResponder.panHandlers}>
+            <View style={styles.dragIndicatorContainer}>
+              <View style={styles.dragIndicator} />
+            </View>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Modifier le profil</Text>
+            </View>
+          </View>
+
+          <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+            {/* Photo */}
+            <View style={styles.editPhotoSection}>
+              <Image source={{ uri: profile.photo }} style={styles.editPhoto} />
+              <Pressable style={styles.changePhotoButton}>
+                <Ionicons name="camera" size={16} color={theme.white} />
+              </Pressable>
+            </View>
+
+            <Text style={styles.inputLabel}>Nom complet</Text>
+            <TextInput
+              style={styles.textInput}
+              value={name}
+              onChangeText={setName}
+              placeholder="Votre nom"
+              placeholderTextColor={theme.textMuted}
+            />
+
+            <Text style={styles.inputLabel}>Bio</Text>
+            <TextInput
+              style={styles.textArea}
+              value={bio}
+              onChangeText={setBio}
+              placeholder="Décrivez-vous en quelques mots..."
+              placeholderTextColor={theme.textMuted}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+
+            <Text style={styles.inputLabel}>Téléphone</Text>
+            <TextInput
+              style={styles.textInput}
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="06 XX XX XX XX"
+              placeholderTextColor={theme.textMuted}
+              keyboardType="phone-pad"
+            />
+
+            <Text style={styles.inputLabel}>Email</Text>
+            <TextInput
+              style={styles.textInput}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="email@exemple.com"
+              placeholderTextColor={theme.textMuted}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <Pressable style={styles.saveButton} onPress={handleSave}>
+              <Text style={styles.saveButtonText}>Enregistrer</Text>
+            </Pressable>
+          </ScrollView>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
+
+// ============================================
+// MODALE SERVICES
+// ============================================
+const ServicesModal = ({ visible, onClose, services }: {
+  visible: boolean;
+  onClose: () => void;
+  services: typeof MOCK_SERVICES;
+}) => {
+  const insets = useSafeAreaInsets();
+  const translateY = useRef(new Animated.Value(height)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gesture) => gesture.dy > 5,
+      onPanResponderMove: (_, gesture) => {
+        if (gesture.dy > 0) translateY.setValue(gesture.dy);
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dy > 100 || gesture.vy > 0.5) {
+          handleClose();
+        } else {
+          Animated.spring(translateY, { toValue: 0, tension: 65, friction: 11, useNativeDriver: true }).start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(translateY, { toValue: 0, tension: 65, friction: 11, useNativeDriver: true }),
+        Animated.timing(backdropAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible]);
+
+  const handleClose = () => {
+    Animated.parallel([
+      Animated.timing(translateY, { toValue: height, duration: 250, useNativeDriver: true }),
+      Animated.timing(backdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => onClose());
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
+      <View style={styles.modalContainer}>
+        <Animated.View style={[styles.backdrop, { opacity: backdropAnim }]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
+        </Animated.View>
+
+        <Animated.View style={[styles.modal, { transform: [{ translateY }], paddingBottom: insets.bottom + 20 }]}>
+          <View {...panResponder.panHandlers}>
+            <View style={styles.dragIndicatorContainer}>
+              <View style={styles.dragIndicator} />
+            </View>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Mes services</Text>
+            </View>
+          </View>
+
+          <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+            {services.map((service) => (
+              <View key={service.id} style={styles.editServiceItem}>
+                <View style={styles.editServiceInfo}>
+                  <Text style={styles.editServiceName}>{service.name}</Text>
+                  <View style={styles.editServiceDetails}>
+                    <Text style={styles.editServiceDuration}>{service.duration} min</Text>
+                    <Text style={styles.editServicePrice}>{service.price}€</Text>
+                  </View>
+                </View>
+                <Pressable style={styles.editServiceButton}>
+                  <Ionicons name="create-outline" size={18} color={theme.accent} />
+                </Pressable>
+              </View>
+            ))}
+
+            <Pressable style={styles.addServiceButton}>
+              <Ionicons name="add" size={20} color={theme.accent} />
+              <Text style={styles.addServiceButtonText}>Ajouter un service</Text>
+            </Pressable>
+          </ScrollView>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
+
+// ============================================
+// MODALE ZONE D'INTERVENTION
+// ============================================
+const ZoneModal = ({ visible, onClose, profile }: {
+  visible: boolean;
+  onClose: () => void;
+  profile: typeof MOCK_PROFILE;
+}) => {
+  const insets = useSafeAreaInsets();
+  const translateY = useRef(new Animated.Value(height)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+  const [address, setAddress] = useState(profile.address);
+  const [canTravel, setCanTravel] = useState(profile.canTravel);
+  const [radius, setRadius] = useState(profile.radius.toString());
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gesture) => gesture.dy > 5,
+      onPanResponderMove: (_, gesture) => {
+        if (gesture.dy > 0) translateY.setValue(gesture.dy);
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dy > 100 || gesture.vy > 0.5) {
+          handleClose();
+        } else {
+          Animated.spring(translateY, { toValue: 0, tension: 65, friction: 11, useNativeDriver: true }).start();
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (visible) {
+      setAddress(profile.address);
+      setCanTravel(profile.canTravel);
+      setRadius(profile.radius.toString());
+      Animated.parallel([
+        Animated.spring(translateY, { toValue: 0, tension: 65, friction: 11, useNativeDriver: true }),
+        Animated.timing(backdropAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible]);
+
+  const handleClose = () => {
+    Animated.parallel([
+      Animated.timing(translateY, { toValue: height, duration: 250, useNativeDriver: true }),
+      Animated.timing(backdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => onClose());
+  };
+
+  const handleSave = () => {
+    console.log("Save zone:", { address, canTravel, radius });
+    handleClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
+      <View style={styles.modalContainer}>
+        <Animated.View style={[styles.backdrop, { opacity: backdropAnim }]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
+        </Animated.View>
+
+        <Animated.View style={[styles.modal, { transform: [{ translateY }], paddingBottom: insets.bottom + 20 }]}>
+          <View {...panResponder.panHandlers}>
+            <View style={styles.dragIndicatorContainer}>
+              <View style={styles.dragIndicator} />
+            </View>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Zone d'intervention</Text>
+            </View>
+          </View>
+
+          <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+            <Text style={styles.inputLabel}>Adresse du salon</Text>
+            <TextInput
+              style={styles.textInput}
+              value={address}
+              onChangeText={setAddress}
+              placeholder="Votre adresse"
+              placeholderTextColor={theme.textMuted}
+            />
+
+            <View style={styles.switchRow}>
+              <View style={styles.switchInfo}>
+                <Text style={styles.switchLabel}>Je me déplace chez les clients</Text>
+                <Text style={styles.switchDescription}>Activez pour proposer des services à domicile</Text>
+              </View>
+              <Switch
+                value={canTravel}
+                onValueChange={setCanTravel}
+                trackColor={{ false: theme.border, true: theme.accentLight }}
+                thumbColor={canTravel ? theme.accent : theme.textMuted}
+              />
+            </View>
+
+            {canTravel && (
+              <>
+                <Text style={styles.inputLabel}>Rayon de déplacement (km)</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={radius}
+                  onChangeText={setRadius}
+                  placeholder="10"
+                  placeholderTextColor={theme.textMuted}
+                  keyboardType="number-pad"
+                />
+              </>
+            )}
+
+            <Pressable style={styles.saveButton} onPress={handleSave}>
+              <Text style={styles.saveButtonText}>Enregistrer</Text>
+            </Pressable>
+          </ScrollView>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
 
 // ============================================
 // ÉCRAN PRINCIPAL
 // ============================================
 export default function ProfileProScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
-
-  const handleSwitchToClient = () => {
-  router.replace("/(app)/(tabs)/salon");
-  };
-
-  const handleOpenSettings = () => {
-    router.push("/(app)/(shared)/settings");
-  };
-
-  const handleViewPublicProfile = () => {
-    console.log("View public profile");
-  };
-
-  const handleMenuPress = (label: string) => {
-    console.log("Navigate to:", label);
-  };
-
-  const handleSignOut = () => {
-    Alert.alert(
-      "Se déconnecter",
-      "Êtes-vous sûr de vouloir vous déconnecter ?",
-      [
-        { text: "Annuler", style: "cancel" },
-        { 
-          text: "Déconnexion", 
-          style: "destructive",
-          onPress: () => {
-            router.replace("/(auth)/welcome");
-          },
-        },
-      ]
-    );
-  };
+  const [editProfileVisible, setEditProfileVisible] = useState(false);
+  const [servicesVisible, setServicesVisible] = useState(false);
+  const [zoneVisible, setZoneVisible] = useState(false);
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.pageTitle}>Mon profil pro</Text>
-          <Pressable style={styles.settingsButton} onPress={handleOpenSettings}>
-            <Ionicons name="settings-outline" size={24} color={theme.text} />
-          </Pressable>
-        </View>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <ProfileHeader 
+          profile={MOCK_PROFILE} 
+          onEditPress={() => setEditProfileVisible(true)} 
+          onSettingsPress={() => router.push("/(app)/(pro)/settings-pro")}
+        />
+      </View>
 
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.profileTop}>
-            <View style={styles.profileImageContainer}>
-              <Image source={{ uri: MOCK_PRO_PROFILE.image }} style={styles.profileImage} />
-              {MOCK_PRO_PROFILE.verified && (
-                <View style={styles.verifiedBadge}>
-                  <Ionicons name="checkmark" size={12} color="#FFF" />
-                </View>
-              )}
+      {/* Contenu */}
+      <View style={styles.content}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={{ paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Services */}
+          <SectionHeader title="Services & Tarifs" actionText="Gérer" onAction={() => setServicesVisible(true)} />
+          <View style={styles.servicesPreview}>
+            {MOCK_SERVICES.slice(0, 3).map((service) => (
+              <ServiceItem key={service.id} service={service} onPress={() => setServicesVisible(true)} />
+            ))}
+            {MOCK_SERVICES.length > 3 && (
+              <Pressable style={styles.viewAllButton} onPress={() => setServicesVisible(true)}>
+                <Text style={styles.viewAllText}>Voir les {MOCK_SERVICES.length} services</Text>
+                <Ionicons name="chevron-forward" size={16} color={theme.accent} />
+              </Pressable>
+            )}
+          </View>
+
+          {/* Zone */}
+          <SectionHeader title="Zone d'intervention" actionText="Modifier" onAction={() => setZoneVisible(true)} />
+          <View style={styles.zoneCard}>
+            <View style={styles.zoneRow}>
+              <Ionicons name="location-outline" size={20} color={theme.accent} />
+              <Text style={styles.zoneText}>{MOCK_PROFILE.address}</Text>
             </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{MOCK_PRO_PROFILE.name}</Text>
-              <Text style={styles.profileSpecialty}>
-                {MOCK_PRO_PROFILE.specialty} • {MOCK_PRO_PROFILE.location}
-              </Text>
-              <View style={styles.ratingRow}>
-                <Ionicons name="star" size={16} color="#FFB800" />
-                <Text style={styles.ratingText}>
-                  {MOCK_PRO_PROFILE.rating} ({MOCK_PRO_PROFILE.reviewCount} avis)
-                </Text>
+            {MOCK_PROFILE.canTravel && (
+              <View style={styles.zoneRow}>
+                <Ionicons name="car-outline" size={20} color={theme.success} />
+                <Text style={styles.zoneText}>Déplacement jusqu'à {MOCK_PROFILE.radius} km</Text>
               </View>
+            )}
+          </View>
+
+          {/* Statistiques rapides */}
+          <SectionHeader title="Statistiques" />
+          <View style={styles.statsCard}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{MOCK_PROFILE.reviewsCount}</Text>
+              <Text style={styles.statLabel}>Avis clients</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{MOCK_PROFILE.rating}</Text>
+              <Text style={styles.statLabel}>Note moyenne</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>98%</Text>
+              <Text style={styles.statLabel}>Satisfaction</Text>
             </View>
           </View>
-          
-          <Pressable style={styles.viewProfileButton} onPress={handleViewPublicProfile}>
-            <Ionicons name="eye-outline" size={18} color={theme.text} />
-            <Text style={styles.viewProfileButtonText}>Voir mon profil public</Text>
+
+          {/* Liens rapides */}
+          <SectionHeader title="Mon compte" />
+          <View style={styles.settingsCard}>
+            <SettingItem icon="shield-checkmark-outline" label="Vérification d'identité" value="Vérifié" onPress={() => {}} />
+            <SettingItem icon="help-circle-outline" label="Aide & Support" onPress={() => {}} />
+          </View>
+
+          {/* Déconnexion */}
+          <Pressable style={styles.logoutButton}>
+            <Ionicons name="log-out-outline" size={20} color={theme.error} />
+            <Text style={styles.logoutText}>Se déconnecter</Text>
           </Pressable>
-        </View>
 
-        {/* Switch to Client */}
-        <Pressable style={styles.switchCard} onPress={handleSwitchToClient}>
-          <View style={styles.switchCardLeft}>
-            <View style={styles.switchIconContainer}>
-              <Ionicons name="swap-horizontal" size={20} color={theme.info} />
-            </View>
-            <View>
-              <Text style={styles.switchCardTitle}>Passer en mode Client</Text>
-              <Text style={styles.switchCardSubtitle}>Accéder à l'espace client</Text>
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
-        </Pressable>
+          <Text style={styles.versionText}>TapeHair Pro v1.0.0</Text>
+        </ScrollView>
+      </View>
 
-        {/* Informations Section */}
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Informations</Text>
-          <View style={styles.menuCard}>
-            {INFO_MENU.map((item, index) => (
-              <Pressable 
-                key={index} 
-                style={[
-                  styles.menuItem,
-                  index < INFO_MENU.length - 1 && styles.menuItemBorder,
-                ]}
-                onPress={() => handleMenuPress(item.label)}
-              >
-                <View style={styles.menuItemLeft}>
-                  <View style={styles.menuIconContainer}>
-                    <Ionicons name={item.icon as any} size={20} color={theme.text} />
-                  </View>
-                  <Text style={styles.menuItemLabel}>{item.label}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        {/* Revenus Section */}
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Revenus</Text>
-          <View style={styles.menuCard}>
-            {REVENUE_MENU.map((item, index) => (
-              <Pressable 
-                key={index} 
-                style={[
-                  styles.menuItem,
-                  index < REVENUE_MENU.length - 1 && styles.menuItemBorder,
-                ]}
-                onPress={() => handleMenuPress(item.label)}
-              >
-                <View style={styles.menuItemLeft}>
-                  <View style={styles.menuIconContainer}>
-                    <Ionicons name={item.icon as any} size={20} color={theme.text} />
-                  </View>
-                  <Text style={styles.menuItemLabel}>{item.label}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        {/* Logout Button */}
-        <Pressable style={styles.logoutButton} onPress={handleSignOut}>
-          <Ionicons name="log-out-outline" size={20} color={theme.error} />
-          <Text style={styles.logoutText}>Se déconnecter</Text>
-        </Pressable>
-      </ScrollView>
+      {/* Modales */}
+      <EditProfileModal visible={editProfileVisible} onClose={() => setEditProfileVisible(false)} profile={MOCK_PROFILE} />
+      <ServicesModal visible={servicesVisible} onClose={() => setServicesVisible(false)} services={MOCK_SERVICES} />
+      <ZoneModal visible={zoneVisible} onClose={() => setZoneVisible(false)} profile={MOCK_PROFILE} />
     </View>
   );
 }
@@ -215,198 +603,102 @@ export default function ProfileProScreen() {
 // STYLES
 // ============================================
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: theme.text,
-  },
-  settingsButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.card,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  profileCard: {
-    backgroundColor: theme.card,
-    marginHorizontal: 20,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-  },
-  profileTop: {
-    flexDirection: "row",
-    marginBottom: 16,
-  },
-  profileImageContainer: {
-    position: "relative",
-  },
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  verifiedBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: theme.info,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: theme.card,
-  },
-  profileInfo: {
-    flex: 1,
-    marginLeft: 16,
-    justifyContent: "center",
-  },
-  profileName: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: theme.text,
-  },
-  profileSpecialty: {
-    fontSize: 14,
-    color: theme.textSecondary,
-    marginTop: 2,
-  },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 6,
-  },
-  ratingText: {
-    fontSize: 14,
-    color: theme.textSecondary,
-    fontWeight: "500",
-  },
-  viewProfileButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    backgroundColor: theme.background,
-    borderRadius: 12,
-  },
-  viewProfileButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.text,
-  },
-  switchCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: theme.card,
-    marginHorizontal: 20,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-  },
-  switchCardLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  switchIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "#E3F2FD",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  switchCardTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.text,
-  },
-  switchCardSubtitle: {
-    fontSize: 13,
-    color: theme.textMuted,
-    marginTop: 2,
-  },
-  menuSection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: theme.textMuted,
-    marginLeft: 20,
-    marginBottom: 10,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  menuCard: {
-    backgroundColor: theme.card,
-    marginHorizontal: 20,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  menuItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: theme.border,
-  },
-  menuItemLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  menuIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: theme.background,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  menuItemLabel: {
-    fontSize: 15,
-    color: theme.text,
-    fontWeight: "500",
-  },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: theme.errorLight,
-    borderRadius: 16,
-  },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.error,
-  },
+  container: { flex: 1, backgroundColor: theme.black },
+
+  // Header
+  header: { backgroundColor: theme.black, paddingHorizontal: 20, paddingBottom: 24 },
+  profileHeader: { alignItems: "center" },
+  settingsButton: { position: "absolute", top: 0, right: 0, width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  profileImageContainer: { position: "relative", marginBottom: 12 },
+  profileImage: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: theme.white },
+  onlineIndicator: { position: "absolute", bottom: 4, right: 4, width: 20, height: 20, borderRadius: 10, borderWidth: 3, borderColor: theme.black },
+  profileName: { fontSize: 24, fontWeight: "bold", color: theme.white, marginBottom: 8 },
+  ratingContainer: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 16 },
+  ratingText: { fontSize: 16, fontWeight: "600", color: theme.white },
+  reviewsText: { fontSize: 14, color: "rgba(255,255,255,0.6)" },
+  editProfileButton: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(255,255,255,0.15)", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
+  editProfileButtonText: { fontSize: 14, fontWeight: "600", color: theme.white },
+
+  // Content
+  content: { flex: 1, backgroundColor: theme.white, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
+  scrollView: { flex: 1, paddingTop: 24 },
+
+  // Section Header
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, marginBottom: 12, marginTop: 8 },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", color: theme.text },
+  sectionAction: { fontSize: 14, fontWeight: "600", color: theme.accent },
+
+  // Services Preview
+  servicesPreview: { marginHorizontal: 20, backgroundColor: theme.card, borderRadius: 16, overflow: "hidden" },
+  serviceItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, borderBottomWidth: 1, borderBottomColor: theme.border },
+  serviceInfo: { flex: 1 },
+  serviceName: { fontSize: 15, fontWeight: "600", color: theme.text },
+  serviceDuration: { fontSize: 13, color: theme.textMuted, marginTop: 2 },
+  serviceRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  servicePrice: { fontSize: 15, fontWeight: "bold", color: theme.text },
+  viewAllButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 14 },
+  viewAllText: { fontSize: 14, fontWeight: "600", color: theme.accent },
+
+  // Zone Card
+  zoneCard: { marginHorizontal: 20, backgroundColor: theme.card, borderRadius: 16, padding: 16, gap: 12, marginBottom: 16 },
+  zoneRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  zoneText: { fontSize: 14, color: theme.text, flex: 1 },
+
+  // Stats Card
+  statsCard: { flexDirection: "row", marginHorizontal: 20, backgroundColor: theme.card, borderRadius: 16, padding: 20, marginBottom: 16 },
+  statItem: { flex: 1, alignItems: "center" },
+  statValue: { fontSize: 24, fontWeight: "bold", color: theme.text },
+  statLabel: { fontSize: 12, color: theme.textMuted, marginTop: 4 },
+  statDivider: { width: 1, backgroundColor: theme.border, marginHorizontal: 8 },
+
+  // Settings Card
+  settingsCard: { marginHorizontal: 20, backgroundColor: theme.card, borderRadius: 16, overflow: "hidden", marginBottom: 16 },
+  settingItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, borderBottomWidth: 1, borderBottomColor: theme.border },
+  settingLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  settingIconContainer: { width: 36, height: 36, borderRadius: 10, backgroundColor: theme.accentLight, alignItems: "center", justifyContent: "center" },
+  settingLabel: { fontSize: 15, color: theme.text },
+  settingRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  settingValue: { fontSize: 13, color: theme.success, fontWeight: "500" },
+
+  // Logout
+  logoutButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 20, marginTop: 8, paddingVertical: 16, backgroundColor: theme.errorLight, borderRadius: 14 },
+  logoutText: { fontSize: 15, fontWeight: "600", color: theme.error },
+  versionText: { textAlign: "center", fontSize: 12, color: theme.textMuted, marginTop: 20, marginBottom: 20 },
+
+  // Modal
+  modalContainer: { flex: 1, justifyContent: "flex-end" },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
+  modal: { backgroundColor: theme.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: height * 0.9 },
+  dragIndicatorContainer: { alignItems: "center", paddingVertical: 12 },
+  dragIndicator: { width: 40, height: 4, backgroundColor: theme.border, borderRadius: 2 },
+  modalHeader: { paddingHorizontal: 20, marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: "bold", color: theme.text },
+  modalScroll: { paddingHorizontal: 20 },
+
+  // Edit Profile
+  editPhotoSection: { alignItems: "center", marginBottom: 24 },
+  editPhoto: { width: 100, height: 100, borderRadius: 50 },
+  changePhotoButton: { position: "absolute", bottom: 0, right: "35%", width: 32, height: 32, borderRadius: 16, backgroundColor: theme.accent, alignItems: "center", justifyContent: "center", borderWidth: 3, borderColor: theme.white },
+  inputLabel: { fontSize: 14, fontWeight: "600", color: theme.textMuted, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 },
+  textInput: { backgroundColor: theme.card, borderRadius: 14, padding: 16, fontSize: 15, color: theme.text, marginBottom: 20 },
+  textArea: { backgroundColor: theme.card, borderRadius: 14, padding: 16, fontSize: 15, color: theme.text, minHeight: 100, marginBottom: 20 },
+  saveButton: { backgroundColor: theme.black, borderRadius: 14, paddingVertical: 16, alignItems: "center", marginBottom: 20 },
+  saveButtonText: { fontSize: 16, fontWeight: "600", color: theme.white },
+
+  // Edit Services
+  editServiceItem: { flexDirection: "row", alignItems: "center", backgroundColor: theme.card, borderRadius: 14, padding: 16, marginBottom: 10 },
+  editServiceInfo: { flex: 1 },
+  editServiceName: { fontSize: 15, fontWeight: "600", color: theme.text },
+  editServiceDetails: { flexDirection: "row", gap: 12, marginTop: 4 },
+  editServiceDuration: { fontSize: 13, color: theme.textMuted },
+  editServicePrice: { fontSize: 13, fontWeight: "600", color: theme.accent },
+  editServiceButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: theme.accentLight, alignItems: "center", justifyContent: "center" },
+  addServiceButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16, borderWidth: 2, borderColor: theme.border, borderStyle: "dashed", borderRadius: 14, marginTop: 10, marginBottom: 20 },
+  addServiceButtonText: { fontSize: 15, fontWeight: "600", color: theme.accent },
+
+  // Zone Modal
+  switchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: theme.card, borderRadius: 14, padding: 16, marginBottom: 20 },
+  switchInfo: { flex: 1, marginRight: 16 },
+  switchLabel: { fontSize: 15, fontWeight: "600", color: theme.text },
+  switchDescription: { fontSize: 13, color: theme.textMuted, marginTop: 4 },
 });

@@ -36,7 +36,7 @@ const theme = {
 const TAB_CONFIG = [
   { name: "dashboard", label: "Dashboard", icon: "grid-outline", iconActive: "grid" },
   { name: "agenda", label: "Agenda", icon: "calendar-outline", iconActive: "calendar" },
-  { name: "publications", label: "Posts", icon: "images-outline", iconActive: "images" },
+  { name: "vitrine", label: "Vitrine", icon: "storefront-outline", iconActive: "storefront" },
   { name: "profile-pro", label: "Profil", icon: "person-outline", iconActive: "person" },
 ];
 
@@ -106,7 +106,7 @@ export default function ProTabsLayout() {
       >
         <Tabs.Screen name="dashboard" />
         <Tabs.Screen name="agenda" />
-        <Tabs.Screen name="publications" />
+        <Tabs.Screen name="vitrine" />
         <Tabs.Screen name="profile-pro" />
       </Tabs>
     </ScrollContext.Provider>
