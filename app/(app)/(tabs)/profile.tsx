@@ -18,19 +18,24 @@ import { useScrollContext } from "./_layout";
 import { useAuthStore } from "@stores/authStore";
 import { useBookingStore } from "@stores/bookingStore";
 
+// ============================================
+// THEME - Style Premium (Header noir)
+// ============================================
 const theme = {
-  background: "#FFFFFF",
+  black: "#000000",
+  white: "#FFFFFF",
+  card: "#F8FAFC",
   text: "#000000",
-  textSecondary: "#666666",
-  textMuted: "#999999",
-  border: "#E5E5E5",
-  card: "#F5F5F5",
+  textSecondary: "#64748B",
+  textMuted: "#94A3B8",
+  border: "#E2E8F0",
   info: "#1976D2",
+  infoLight: "#E3F2FD",
   error: "#E53935",
   errorLight: "#FFEBEE",
 };
 
-// Données mock pour les stats (à remplacer par les vraies données plus tard)
+// Données mock pour les stats
 const MOCK_STATS = {
   favorites: 12,
   appointments: 8,
@@ -131,246 +136,236 @@ export default function ProfileScreen() {
   };
 
   const handleMenuPress = (route: string) => {
-    // TODO: Implémenter la navigation vers les sous-pages
     console.log("Navigate to:", route);
-    // router.push(route);
   };
 
   const handleSwitchToPro = () => {
     router.replace("/(app)/(pro)/(tabs)/");
   };
 
-  // Vérifier si l'utilisateur est un professionnel (coiffeur ou salon)
-  // Pour tester, mettre isProfessional = true
-  const isProfessional = true; // user?.role === "coiffeur" || user?.role === "salon";
+  // Vérifier si l'utilisateur est un professionnel
+  const isProfessional = true;
 
   // Données utilisateur (mock si non connecté)
   const userName = user?.full_name || "Utilisateur";
   const userEmail = user?.email || "email@example.com";
   const userImage = user?.avatar_url || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200";
-  
-  // Calculer l'année d'inscription (mock pour l'instant)
   const memberYear = "2023";
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
-        {/* Header avec icône paramètres */}
-        <View style={styles.header}>
-          <Text style={styles.pageTitle}>Profil</Text>
-          <Pressable style={styles.settingsButton} onPress={handleOpenSettings}>
-            <Ionicons name="settings-outline" size={24} color={theme.text} />
+      {/* HEADER NOIR AVEC PROFIL */}
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        {/* Top row - juste settings */}
+        <View style={styles.headerTopRow}>
+          <View style={{ width: 44 }} />
+          <Pressable onPress={handleOpenSettings}>
+            <Ionicons name="settings-outline" size={24} color={theme.white} />
           </Pressable>
         </View>
 
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.profileTop}>
-            <Image source={{ uri: userImage }} style={styles.profileImage} />
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{userName}</Text>
-              <Text style={styles.profileEmail}>{userEmail}</Text>
-              <Text style={styles.memberSince}>Membre depuis {memberYear}</Text>
-            </View>
-            <Pressable style={styles.editButton}>
-              <Ionicons name="create-outline" size={18} color={theme.textMuted} />
+        {/* Photo + Infos */}
+        <View style={styles.profileSection}>
+          <View style={styles.avatarContainer}>
+            <Image source={{ uri: userImage }} style={styles.avatar} />
+            <Pressable style={styles.editAvatarButton}>
+              <Ionicons name="camera" size={14} color={theme.white} />
             </Pressable>
           </View>
           
-          {/* Stats */}
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{MOCK_STATS.favorites}</Text>
-              <Text style={styles.statLabel}>Favoris</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{completedBookings || MOCK_STATS.appointments}</Text>
-              <Text style={styles.statLabel}>RDV</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <View style={styles.ratingContainer}>
-                <Ionicons name="star" size={14} color="#FFB800" />
-                <Text style={styles.statValue}>{MOCK_STATS.rating}</Text>
-              </View>
-              <Text style={styles.statLabel}>Note</Text>
-            </View>
-          </View>
+          <Text style={styles.userName}>{userName}</Text>
+          <Text style={styles.userEmail}>{userEmail}</Text>
+          <Text style={styles.memberSince}>Membre depuis {memberYear}</Text>
         </View>
 
-        {/* Switch to Pro - visible uniquement pour les professionnels */}
-        {isProfessional && (
-          <Pressable style={styles.switchCard} onPress={handleSwitchToPro}>
-            <View style={styles.switchCardLeft}>
-              <View style={styles.switchIconContainer}>
-                <Ionicons name="briefcase-outline" size={20} color={theme.info} />
-              </View>
-              <View>
-                <Text style={styles.switchCardTitle}>Passer en mode Pro</Text>
-                <Text style={styles.switchCardSubtitle}>Gérer vos RDV et revenus</Text>
-              </View>
+        {/* Stats */}
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{MOCK_STATS.favorites}</Text>
+            <Text style={styles.statLabel}>Favoris</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{completedBookings || MOCK_STATS.appointments}</Text>
+            <Text style={styles.statLabel}>RDV</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <View style={styles.ratingContainer}>
+              <Ionicons name="star" size={14} color="#FFB800" />
+              <Text style={styles.statValue}>{MOCK_STATS.rating}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
-          </Pressable>
-        )}
+            <Text style={styles.statLabel}>Note</Text>
+          </View>
+        </View>
+      </View>
 
-        {/* Mes Favoris Section */}
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Mes favoris</Text>
-          <View style={styles.menuCard}>
-            {FAVORITES_MENU.map((item, index) => (
-              <Pressable 
-                key={index} 
-                style={[
-                  styles.menuItem,
-                  index < FAVORITES_MENU.length - 1 && styles.menuItemBorder,
-                ]}
-                onPress={() => handleMenuPress(item.route)}
-              >
-                <View style={styles.menuItemLeft}>
-                  <View style={styles.menuIconContainer}>
-                    <Ionicons name={item.icon as any} size={20} color={theme.text} />
-                  </View>
-                  <Text style={styles.menuItemLabel}>{item.label}</Text>
+      {/* CONTENU BLANC ARRONDI */}
+      <View style={styles.content}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={{ paddingTop: 20, paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
+          {/* Switch to Pro */}
+          {isProfessional && (
+            <Pressable style={styles.switchCard} onPress={handleSwitchToPro}>
+              <View style={styles.switchCardLeft}>
+                <View style={styles.switchIconContainer}>
+                  <Ionicons name="briefcase-outline" size={20} color={theme.white} />
                 </View>
-                <View style={styles.menuItemRight}>
-                  <View style={styles.countBadge}>
-                    <Text style={styles.countBadgeText}>{item.count}</Text>
+                <View>
+                  <Text style={styles.switchCardTitle}>Passer en mode Pro</Text>
+                  <Text style={styles.switchCardSubtitle}>Gérer vos RDV et revenus</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
+            </Pressable>
+          )}
+
+          {/* Mes Favoris Section */}
+          <View style={styles.menuSection}>
+            <Text style={styles.sectionTitle}>Mes favoris</Text>
+            <View style={styles.menuCard}>
+              {FAVORITES_MENU.map((item, index) => (
+                <Pressable 
+                  key={index} 
+                  style={[
+                    styles.menuItem,
+                    index < FAVORITES_MENU.length - 1 && styles.menuItemBorder,
+                  ]}
+                  onPress={() => handleMenuPress(item.route)}
+                >
+                  <View style={styles.menuItemLeft}>
+                    <View style={styles.menuIconContainer}>
+                      <Ionicons name={item.icon as any} size={20} color={theme.text} />
+                    </View>
+                    <Text style={styles.menuItemLabel}>{item.label}</Text>
+                  </View>
+                  <View style={styles.menuItemRight}>
+                    <View style={styles.countBadge}>
+                      <Text style={styles.countBadgeText}>{item.count}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {/* Mon Compte Section */}
+          <View style={styles.menuSection}>
+            <Text style={styles.sectionTitle}>Mon compte</Text>
+            <View style={styles.menuCard}>
+              {ACCOUNT_MENU.map((item, index) => (
+                <Pressable 
+                  key={index} 
+                  style={[
+                    styles.menuItem,
+                    index < ACCOUNT_MENU.length - 1 && styles.menuItemBorder,
+                  ]}
+                  onPress={() => handleMenuPress(item.route)}
+                >
+                  <View style={styles.menuItemLeft}>
+                    <View style={styles.menuIconContainer}>
+                      <Ionicons name={item.icon as any} size={20} color={theme.text} />
+                    </View>
+                    <Text style={styles.menuItemLabel}>{item.label}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-                </View>
-              </Pressable>
-            ))}
+                </Pressable>
+              ))}
+            </View>
           </View>
-        </View>
 
-        {/* Mon Compte Section */}
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Mon compte</Text>
-          <View style={styles.menuCard}>
-            {ACCOUNT_MENU.map((item, index) => (
-              <Pressable 
-                key={index} 
-                style={[
-                  styles.menuItem,
-                  index < ACCOUNT_MENU.length - 1 && styles.menuItemBorder,
-                ]}
-                onPress={() => handleMenuPress(item.route)}
-              >
-                <View style={styles.menuItemLeft}>
-                  <View style={styles.menuIconContainer}>
-                    <Ionicons name={item.icon as any} size={20} color={theme.text} />
-                  </View>
-                  <Text style={styles.menuItemLabel}>{item.label}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        {/* Logout Button */}
-        <Pressable style={styles.logoutButton} onPress={handleSignOut}>
-          <Ionicons name="log-out-outline" size={20} color={theme.error} />
-          <Text style={styles.logoutText}>Se déconnecter</Text>
-        </Pressable>
-      </ScrollView>
+          {/* Logout Button */}
+          <Pressable style={styles.logoutButton} onPress={handleSignOut}>
+            <Ionicons name="log-out-outline" size={20} color={theme.error} />
+            <Text style={styles.logoutText}>Se déconnecter</Text>
+          </Pressable>
+        </ScrollView>
+      </View>
     </View>
   );
 }
 
+// ============================================
+// STYLES
+// ============================================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.background,
-  },
-  scrollView: {
-    flex: 1,
+    backgroundColor: theme.black,
   },
   
-  // Header
+  // Header noir avec profil
   header: {
+    backgroundColor: theme.black,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  headerTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  
+  // Profile section dans le header
+  profileSection: {
+    alignItems: "center",
     marginBottom: 24,
   },
-  pageTitle: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: theme.text,
+  avatarContainer: {
+    position: "relative",
+    marginBottom: 12,
   },
-  settingsButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.card,
+  avatar: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 3,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  editAvatarButton: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.black,
+    borderWidth: 2,
+    borderColor: theme.white,
     alignItems: "center",
     justifyContent: "center",
   },
-
-  // Profile Card
-  profileCard: {
-    backgroundColor: theme.card,
-    marginHorizontal: 20,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-  },
-  profileTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  profileImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-  },
-  profileInfo: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  profileName: {
-    fontSize: 20,
+  userName: {
+    fontSize: 22,
     fontWeight: "bold",
-    color: theme.text,
+    color: theme.white,
+    marginBottom: 4,
   },
-  profileEmail: {
+  userEmail: {
     fontSize: 14,
-    color: theme.textSecondary,
-    marginTop: 2,
+    color: "rgba(255,255,255,0.6)",
+    marginBottom: 4,
   },
   memberSince: {
     fontSize: 12,
-    color: theme.textMuted,
-    marginTop: 4,
-  },
-  editButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.background,
-    alignItems: "center",
-    justifyContent: "center",
+    color: "rgba(255,255,255,0.4)",
   },
 
-  // Stats
+  // Stats dans le header
   statsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: theme.border,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 16,
+    paddingVertical: 16,
   },
   statItem: {
     alignItems: "center",
@@ -379,22 +374,33 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 18,
     fontWeight: "bold",
-    color: theme.text,
+    color: theme.white,
   },
   statLabel: {
     fontSize: 12,
-    color: theme.textMuted,
+    color: "rgba(255,255,255,0.6)",
     marginTop: 2,
   },
   statDivider: {
     width: 1,
     height: 32,
-    backgroundColor: theme.border,
+    backgroundColor: "rgba(255,255,255,0.15)",
   },
   ratingContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+  },
+  
+  // Content blanc arrondi
+  content: {
+    flex: 1,
+    backgroundColor: theme.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+  },
+  scrollView: {
+    flex: 1,
   },
 
   // Switch Card (Mode Pro)
@@ -417,7 +423,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: "#E3F2FD",
+    backgroundColor: theme.black,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -437,7 +443,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: theme.textMuted,
     marginLeft: 20,
@@ -471,7 +477,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: theme.background,
+    backgroundColor: theme.white,
     alignItems: "center",
     justifyContent: "center",
   },

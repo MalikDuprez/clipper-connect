@@ -17,13 +17,17 @@ import { useScrollContext } from "./_layout";
 import { useBookingStore, BookingItem, BookingStatus } from "@stores/bookingStore";
 import { useOrderStore, OrderItem, OrderStatus } from "@stores/orderStore";
 
+// ============================================
+// THEME - Style Premium (Header noir)
+// ============================================
 const theme = {
-  background: "#FFFFFF",
+  black: "#000000",
+  white: "#FFFFFF",
+  card: "#F8FAFC",
   text: "#000000",
-  textSecondary: "#666666",
-  textMuted: "#999999",
-  border: "#E5E5E5",
-  card: "#F5F5F5",
+  textSecondary: "#64748B",
+  textMuted: "#94A3B8",
+  border: "#E2E8F0",
   success: "#2E7D32",
   successLight: "#E8F5E9",
   warning: "#F57C00",
@@ -261,7 +265,7 @@ const StatusBadge = ({ label, color, bgColor }: { label: string; color: string; 
   </View>
 );
 
-// Carte RDV En cours (grande avec tracking)
+// Carte RDV En cours
 const ActiveBookingCard = ({ booking, onContact, onCancel }: { 
   booking: BookingItem; 
   onContact: () => void;
@@ -322,7 +326,6 @@ const ActiveBookingCard = ({ booking, onContact, onCancel }: {
 // Carte Commande En cours
 const ActiveOrderCard = ({ order, onTrack }: { order: OrderItem; onTrack: () => void }) => {
   const statusConfig = getOrderStatusConfig(order.status);
-  const productCount = order.products.reduce((sum, p) => sum + p.quantity, 0);
   
   return (
     <View style={styles.activeCard}>
@@ -336,21 +339,35 @@ const ActiveOrderCard = ({ order, onTrack }: { order: OrderItem; onTrack: () => 
       
       <View style={styles.orderProductsRow}>
         {order.products.slice(0, 3).map((product, index) => (
-          <Image 
-            key={product.id} 
-            source={{ uri: product.image }} 
-            style={[styles.orderProductThumb, { marginLeft: index > 0 ? -12 : 0 }]} 
+          <Image
+            key={product.id}
+            source={{ uri: product.image }}
+            style={[
+              styles.orderProductThumb,
+              index > 0 && { marginLeft: -12 },
+            ]}
           />
         ))}
         <Text style={styles.orderProductCount}>
-          {productCount} article{productCount > 1 ? "s" : ""} • {order.total.toFixed(2)}€
+          {order.products.length} article{order.products.length > 1 ? "s" : ""}
+        </Text>
+      </View>
+
+      <View style={styles.deliveryInfo}>
+        <Ionicons 
+          name={order.deliveryMethod === "home" ? "home-outline" : "location-outline"} 
+          size={14} 
+          color={theme.textMuted} 
+        />
+        <Text style={styles.deliveryText} numberOfLines={1}>
+          {order.deliveryAddress}
         </Text>
       </View>
 
       {order.estimatedDelivery && (
         <View style={styles.deliveryInfo}>
           <Ionicons name="calendar-outline" size={14} color={theme.textMuted} />
-          <Text style={styles.deliveryText}>Livraison estimée : {order.estimatedDelivery}</Text>
+          <Text style={styles.deliveryText}>Livraison prévue le {order.estimatedDelivery}</Text>
         </View>
       )}
 
@@ -363,12 +380,13 @@ const ActiveOrderCard = ({ order, onTrack }: { order: OrderItem; onTrack: () => 
 };
 
 // Carte RDV À venir
-const UpcomingBookingCard = ({ booking, onModify, onCancel }: { 
-  booking: BookingItem; 
+const UpcomingBookingCard = ({ booking, onModify, onCancel }: {
+  booking: BookingItem;
   onModify: () => void;
   onCancel: () => void;
 }) => {
   const statusConfig = getBookingStatusConfig(booking.status);
+  const totalPrice = booking.inspiration.price + (booking.serviceFee || 0);
   
   return (
     <View style={styles.upcomingCard}>
@@ -378,6 +396,7 @@ const UpcomingBookingCard = ({ booking, onModify, onCancel }: {
           <Text style={styles.upcomingSalon}>{booking.coiffeur.salon}</Text>
           <StatusBadge {...statusConfig} />
         </View>
+        
         <Text style={styles.upcomingService}>{booking.inspiration.title}</Text>
         
         <View style={styles.upcomingMeta}>
@@ -391,7 +410,7 @@ const UpcomingBookingCard = ({ booking, onModify, onCancel }: {
           </View>
           <View style={styles.upcomingMetaItem}>
             <Ionicons name={booking.location === "domicile" ? "home-outline" : "location-outline"} size={14} color={theme.textMuted} />
-            <Text style={styles.metaText}>{booking.location === "domicile" ? "À domicile" : "Au salon"}</Text>
+            <Text style={styles.metaText}>{booking.location === "domicile" ? "À domicile" : "En salon"}</Text>
           </View>
         </View>
 
@@ -404,15 +423,15 @@ const UpcomingBookingCard = ({ booking, onModify, onCancel }: {
               <Text style={styles.ratingText}>{booking.coiffeur.rating}</Text>
             </View>
           </View>
-          <Text style={styles.priceText}>{booking.inspiration.price}€</Text>
+          <Text style={styles.priceText}>{totalPrice}€</Text>
         </View>
-
+        
         <View style={styles.upcomingActions}>
-          <Pressable style={styles.actionBtn} onPress={onModify}>
-            <Text style={styles.actionBtnText}>Modifier</Text>
-          </Pressable>
           <Pressable style={[styles.actionBtn, styles.actionBtnOutline]} onPress={onCancel}>
             <Text style={styles.actionBtnTextOutline}>Annuler</Text>
+          </Pressable>
+          <Pressable style={styles.actionBtn} onPress={onModify}>
+            <Text style={styles.actionBtnText}>Modifier</Text>
           </Pressable>
         </View>
       </View>
@@ -420,13 +439,12 @@ const UpcomingBookingCard = ({ booking, onModify, onCancel }: {
   );
 };
 
-// Carte Passée (RDV ou Commande)
-const PastBookingCard = ({ booking, onRate, onRebook }: { 
-  booking: BookingItem; 
+// Carte RDV Passé
+const PastBookingCard = ({ booking, onRate, onRebook }: {
+  booking: BookingItem;
   onRate: () => void;
   onRebook: () => void;
 }) => {
-  const statusConfig = getBookingStatusConfig(booking.status);
   const isCancelled = booking.status === "cancelled";
   
   return (
@@ -435,15 +453,12 @@ const PastBookingCard = ({ booking, onRate, onRebook }: {
       <View style={styles.pastContent}>
         <View style={styles.pastHeader}>
           <View style={styles.pastTypeIcon}>
-            <Ionicons name="cut" size={12} color={theme.textMuted} />
+            <Ionicons name="cut" size={12} color={theme.textSecondary} />
           </View>
-          {isCancelled && <StatusBadge {...statusConfig} />}
+          <Text style={styles.pastTitle}>{booking.inspiration.title}</Text>
         </View>
-        <Text style={styles.pastTitle}>{booking.inspiration.title}</Text>
-        <Text style={styles.pastSubtitle}>{booking.coiffeur.salon}</Text>
-        <Text style={styles.pastMeta}>
-          {booking.dateFormatted} • {booking.inspiration.price}€
-        </Text>
+        <Text style={styles.pastSubtitle}>{booking.coiffeur.name} • {booking.coiffeur.salon}</Text>
+        <Text style={styles.pastMeta}>{booking.dateFormatted} à {booking.time}</Text>
         
         {!isCancelled && (
           <View style={styles.pastActions}>
@@ -454,7 +469,7 @@ const PastBookingCard = ({ booking, onRate, onRebook }: {
               </Pressable>
             )}
             <Pressable style={styles.rebookBtn} onPress={onRebook}>
-              <Ionicons name="refresh-outline" size={14} color="#FFF" />
+              <Ionicons name="refresh" size={14} color="#FFF" />
               <Text style={styles.rebookBtnText}>Réserver</Text>
             </Pressable>
           </View>
@@ -464,6 +479,7 @@ const PastBookingCard = ({ booking, onRate, onRebook }: {
   );
 };
 
+// Carte Commande Passée
 const PastOrderCard = ({ order }: { order: OrderItem }) => {
   const statusConfig = getOrderStatusConfig(order.status);
   const isCancelled = order.status === "cancelled";
@@ -472,67 +488,53 @@ const PastOrderCard = ({ order }: { order: OrderItem }) => {
   return (
     <View style={[styles.pastCard, isCancelled && styles.pastCardCancelled]}>
       <View style={styles.pastOrderImages}>
-        {order.products.slice(0, 2).map((product) => (
+        {order.products.slice(0, 4).map((product) => (
           <Image key={product.id} source={{ uri: product.image }} style={styles.pastOrderThumb} />
         ))}
       </View>
       <View style={styles.pastContent}>
         <View style={styles.pastHeader}>
           <View style={styles.pastTypeIcon}>
-            <Ionicons name="cube" size={12} color={theme.textMuted} />
+            <Ionicons name="cube" size={12} color={theme.textSecondary} />
           </View>
-          {isCancelled && <StatusBadge {...statusConfig} />}
+          <Text style={styles.pastTitle}>{productCount} article{productCount > 1 ? "s" : ""}</Text>
         </View>
-        <Text style={styles.pastTitle}>
-          {productCount} article{productCount > 1 ? "s" : ""}
-        </Text>
-        <Text style={styles.pastSubtitle}>
-          {order.products[0].name}{order.products.length > 1 ? ` +${order.products.length - 1}` : ""}
-        </Text>
-        <Text style={styles.pastMeta}>{order.total.toFixed(2)}€</Text>
-        
-        {!isCancelled && (
-          <View style={styles.pastActions}>
-            <Pressable style={styles.rebookBtn}>
-              <Ionicons name="refresh-outline" size={14} color="#FFF" />
-              <Text style={styles.rebookBtnText}>Commander</Text>
-            </Pressable>
-          </View>
-        )}
+        <Text style={styles.pastSubtitle}>{order.total.toFixed(2)}€</Text>
+        <Text style={styles.pastMeta}>{statusConfig.label}</Text>
       </View>
     </View>
   );
 };
 
-// État vide
+// Empty State
 const EmptyState = ({ tab, onAction }: { tab: TabType; onAction: () => void }) => {
-  const config = {
+  const content = {
     active: {
-      icon: "flash-outline" as const,
+      icon: "cut-outline",
       title: "Aucune activité en cours",
-      subtitle: "Vos prestations et livraisons en cours apparaîtront ici",
-      buttonText: "Découvrir",
+      subtitle: "Vos rendez-vous et commandes en cours apparaîtront ici",
+      buttonText: "Trouver l'inspiration",
     },
     upcoming: {
-      icon: "calendar-outline" as const,
-      title: "Aucun rendez-vous prévu",
-      subtitle: "Réservez votre prochaine coupe ou soin",
-      buttonText: "Réserver maintenant",
+      icon: "calendar-outline",
+      title: "Aucun rendez-vous à venir",
+      subtitle: "Réservez votre prochain rendez-vous dès maintenant",
+      buttonText: "Réserver",
     },
     past: {
-      icon: "time-outline" as const,
+      icon: "time-outline",
       title: "Aucun historique",
       subtitle: "Vos rendez-vous et commandes passés apparaîtront ici",
-      buttonText: "Explorer",
+      buttonText: "Découvrir",
     },
   };
 
-  const { icon, title, subtitle, buttonText } = config[tab];
+  const { icon, title, subtitle, buttonText } = content[tab];
 
   return (
     <View style={styles.emptyState}>
       <View style={styles.emptyIconContainer}>
-        <Ionicons name={icon} size={48} color={theme.textMuted} />
+        <Ionicons name={icon as any} size={48} color={theme.textMuted} />
       </View>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptySubtitle}>{subtitle}</Text>
@@ -544,7 +546,7 @@ const EmptyState = ({ tab, onAction }: { tab: TabType; onAction: () => void }) =
 };
 
 // ============================================
-// ÉCRAN PRINCIPAL
+// MAIN COMPONENT
 // ============================================
 export default function ActivityScreen() {
   const insets = useSafeAreaInsets();
@@ -556,7 +558,6 @@ export default function ActivityScreen() {
   
   // Stores
   const { 
-    bookings, 
     getActiveBookings, 
     getUpcomingBookings, 
     getPastBookings,
@@ -565,7 +566,6 @@ export default function ActivityScreen() {
   } = useBookingStore();
   
   const { 
-    orders,
     getActiveOrders, 
     getPastOrders,
   } = useOrderStore();
@@ -599,29 +599,16 @@ export default function ActivityScreen() {
   };
 
   // Handlers
-  const handleCancelBooking = (id: string) => {
-    cancelBooking(id);
-  };
+  const handleCancelBooking = (id: string) => cancelBooking(id);
+  const handleRateBooking = (id: string) => rateBooking(id);
+  const handleRebook = () => router.push("/(tabs)/");
+  const handleGoToInspiration = () => router.push("/(tabs)/");
 
-  const handleRateBooking = (id: string) => {
-    // TODO: Ouvrir modal de notation
-    rateBooking(id);
-  };
-
-  const handleRebook = (booking: BookingItem) => {
-    // TODO: Pré-remplir le flow de réservation
-    router.push("/(tabs)/");
-  };
-
-  const handleGoToInspiration = () => {
-    router.push("/(tabs)/");
-  };
-
-  // Tabs
-  const tabs: { key: TabType; label: string; count: number }[] = [
-    { key: "active", label: "En cours", count: activeBookings.length + activeOrders.length },
-    { key: "upcoming", label: "À venir", count: upcomingBookings.length },
-    { key: "past", label: "Passées", count: pastBookings.length + pastOrders.length },
+  // Tabs config
+  const tabs: { key: TabType; label: string; icon: string; count: number }[] = [
+    { key: "active", label: "En cours", icon: "flash-outline", count: activeBookings.length + activeOrders.length },
+    { key: "upcoming", label: "À venir", icon: "calendar-outline", count: upcomingBookings.length },
+    { key: "past", label: "Passées", icon: "time-outline", count: pastBookings.length + pastOrders.length },
   ];
 
   // Rendu du contenu selon l'onglet
@@ -642,11 +629,7 @@ export default function ActivityScreen() {
               />
             ))}
             {activeOrders.map((order) => (
-              <ActiveOrderCard
-                key={order.id}
-                order={order}
-                onTrack={() => {}}
-              />
+              <ActiveOrderCard key={order.id} order={order} onTrack={() => {}} />
             ))}
           </>
         );
@@ -673,11 +656,9 @@ export default function ActivityScreen() {
           return <EmptyState tab="past" onAction={handleGoToInspiration} />;
         }
         
-        // Filtrer selon le sous-filtre sélectionné
         const showBookings = pastFilter === "all" || pastFilter === "bookings";
         const showOrders = pastFilter === "all" || pastFilter === "orders";
         
-        // Combiner et trier par date (plus récent en premier)
         const combinedPastItems: Array<{ type: "booking" | "order"; data: BookingItem | OrderItem; date: Date }> = [];
         
         if (showBookings) {
@@ -692,12 +673,10 @@ export default function ActivityScreen() {
           });
         }
         
-        // Tri chronologique inversé (plus récent en premier)
         combinedPastItems.sort((a, b) => b.date.getTime() - a.date.getTime());
         
         return (
           <>
-            {/* Sous-filtres */}
             <View style={styles.pastFiltersContainer}>
               {[
                 { key: "all" as PastFilterType, label: "Tout" },
@@ -724,7 +703,6 @@ export default function ActivityScreen() {
               ))}
             </View>
 
-            {/* Liste filtrée */}
             <View style={styles.pastListContainer}>
               {combinedPastItems.map((item) => {
                 if (item.type === "booking") {
@@ -734,7 +712,7 @@ export default function ActivityScreen() {
                       key={booking.id}
                       booking={booking}
                       onRate={() => handleRateBooking(booking.id)}
-                      onRebook={() => handleRebook(booking)}
+                      onRebook={handleRebook}
                     />
                   );
                 } else {
@@ -750,18 +728,10 @@ export default function ActivityScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.pageTitle}>Activité</Text>
-        </View>
-
+      {/* HEADER NOIR */}
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <Text style={styles.headerTitle}>Activité</Text>
+        
         {/* Tabs */}
         <View style={styles.tabsContainer}>
           {tabs.map((tab) => (
@@ -770,6 +740,11 @@ export default function ActivityScreen() {
               style={[styles.tab, activeTab === tab.key && styles.tabActive]}
               onPress={() => setActiveTab(tab.key)}
             >
+              <Ionicons 
+                name={tab.icon as any} 
+                size={16} 
+                color={activeTab === tab.key ? theme.white : "rgba(255,255,255,0.5)"} 
+              />
               <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
                 {tab.label}
               </Text>
@@ -783,12 +758,22 @@ export default function ActivityScreen() {
             </Pressable>
           ))}
         </View>
+      </View>
 
-        {/* Content */}
-        <View style={styles.content}>
-          {renderContent()}
-        </View>
-      </ScrollView>
+      {/* CONTENU BLANC ARRONDI */}
+      <View style={styles.content}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={{ paddingTop: 20, paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
+          <View style={styles.listContainer}>
+            {renderContent()}
+          </View>
+        </ScrollView>
+      </View>
     </View>
   );
 }
@@ -799,50 +784,49 @@ export default function ActivityScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.background,
+    backgroundColor: theme.black,
   },
-  scrollView: {
-    flex: 1,
-  },
+  
+  // Header noir
   header: {
+    backgroundColor: theme.black,
     paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: theme.white,
     marginBottom: 20,
   },
-  pageTitle: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: theme.text,
-  },
-
+  
   // Tabs
   tabsContainer: {
     flexDirection: "row",
-    paddingHorizontal: 20,
-    marginBottom: 20,
     gap: 8,
   },
   tab: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     borderRadius: 20,
-    backgroundColor: theme.card,
     gap: 6,
   },
   tabActive: {
-    backgroundColor: theme.text,
+    backgroundColor: "rgba(255,255,255,0.15)",
   },
   tabText: {
     fontSize: 14,
     fontWeight: "500",
-    color: theme.textSecondary,
+    color: "rgba(255,255,255,0.5)",
   },
   tabTextActive: {
-    color: "#FFF",
+    color: theme.white,
+    fontWeight: "600",
   },
   tabBadge: {
-    backgroundColor: theme.border,
+    backgroundColor: "rgba(255,255,255,0.2)",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 10,
@@ -850,26 +834,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   tabBadgeActive: {
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: theme.white,
   },
   tabBadgeText: {
     fontSize: 11,
     fontWeight: "600",
-    color: theme.textMuted,
+    color: "rgba(255,255,255,0.7)",
   },
   tabBadgeTextActive: {
-    color: "#FFF",
+    color: theme.black,
   },
-
-  // Content
+  
+  // Content blanc arrondi
   content: {
+    flex: 1,
+    backgroundColor: theme.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  listContainer: {
     paddingHorizontal: 20,
   },
 
   // Status Badge
   statusBadge: {
-    paddingHorizontal: 10,
     paddingVertical: 4,
+    paddingHorizontal: 10,
     borderRadius: 12,
   },
   statusText: {
@@ -877,7 +870,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // Active Card (En cours)
+  // Active Card
   activeCard: {
     backgroundColor: theme.card,
     borderRadius: 20,
@@ -897,8 +890,8 @@ const styles = StyleSheet.create({
   },
   activeCardTypeText: {
     fontSize: 13,
-    fontWeight: "500",
-    color: theme.textSecondary,
+    fontWeight: "600",
+    color: theme.text,
   },
   activeCardContent: {
     flexDirection: "row",
@@ -911,7 +904,7 @@ const styles = StyleSheet.create({
   },
   activeCardInfo: {
     flex: 1,
-    marginLeft: 14,
+    marginLeft: 12,
   },
   activeCoiffeurName: {
     fontSize: 17,
@@ -926,7 +919,7 @@ const styles = StyleSheet.create({
   activeMetaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
     marginTop: 6,
   },
   activeMetaText: {
@@ -935,14 +928,14 @@ const styles = StyleSheet.create({
   },
   trackingSection: {
     backgroundColor: theme.infoLight,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 14,
+    padding: 14,
     marginBottom: 16,
   },
   trackingInfo: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     marginBottom: 10,
   },
   trackingText: {
@@ -951,14 +944,14 @@ const styles = StyleSheet.create({
     color: theme.info,
   },
   trackingBar: {
-    height: 4,
-    backgroundColor: "rgba(25, 118, 210, 0.2)",
-    borderRadius: 2,
+    height: 6,
+    backgroundColor: "rgba(25,118,210,0.2)",
+    borderRadius: 3,
   },
   trackingProgress: {
-    height: 4,
+    height: 6,
     backgroundColor: theme.info,
-    borderRadius: 2,
+    borderRadius: 3,
   },
   activeCardActions: {
     flexDirection: "row",
@@ -972,9 +965,12 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: theme.background,
+    backgroundColor: theme.white,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   activeActionBtnDanger: {
+    borderColor: theme.errorLight,
     backgroundColor: theme.errorLight,
   },
   activeActionText: {
@@ -983,7 +979,7 @@ const styles = StyleSheet.create({
     color: theme.text,
   },
 
-  // Order Card
+  // Order Active Card
   orderProductsRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1006,20 +1002,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 14,
+    marginBottom: 8,
   },
   deliveryText: {
     fontSize: 13,
     color: theme.textMuted,
+    flex: 1,
   },
   trackOrderBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: theme.text,
+    backgroundColor: theme.black,
     paddingVertical: 14,
     borderRadius: 14,
+    marginTop: 8,
   },
   trackOrderBtnText: {
     fontSize: 15,
@@ -1027,7 +1025,7 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
 
-  // Upcoming Card (À venir)
+  // Upcoming Card
   upcomingCard: {
     backgroundColor: theme.card,
     borderRadius: 20,
@@ -1115,7 +1113,7 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
-    backgroundColor: theme.text,
+    backgroundColor: theme.black,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: "center",
@@ -1136,12 +1134,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Past Card (Passées)
+  // Past Card
   pastCard: {
     flexDirection: "row",
     backgroundColor: theme.card,
     borderRadius: 16,
     padding: 12,
+    marginBottom: 12,
   },
   pastCardCancelled: {
     opacity: 0.7,
@@ -1208,7 +1207,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: theme.background,
+    backgroundColor: theme.white,
     borderWidth: 1,
     borderColor: theme.border,
   },
@@ -1224,7 +1223,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: theme.text,
+    backgroundColor: theme.black,
   },
   rebookBtnText: {
     fontSize: 12,
@@ -1262,7 +1261,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   emptyButton: {
-    backgroundColor: theme.text,
+    backgroundColor: theme.black,
     paddingVertical: 14,
     paddingHorizontal: 28,
     borderRadius: 14,
@@ -1273,7 +1272,7 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
 
-  // Past Filters (sous-filtres)
+  // Past Filters
   pastFiltersContainer: {
     flexDirection: "row",
     gap: 8,
@@ -1286,7 +1285,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.card,
   },
   pastFilterChipActive: {
-    backgroundColor: theme.text,
+    backgroundColor: theme.black,
   },
   pastFilterText: {
     fontSize: 13,
@@ -1297,6 +1296,6 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
   pastListContainer: {
-    gap: 12,
+    gap: 0,
   },
 });

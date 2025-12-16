@@ -24,13 +24,17 @@ import { INSPIRATIONS, COIFFEURS, FILTERS, SEARCH_FILTERS } from "@constants/moc
 
 const { height } = Dimensions.get("window");
 
+// ============================================
+// THEME - Style Premium (Header noir)
+// ============================================
 const theme = {
-  background: "#FFFFFF",
+  black: "#000000",
+  white: "#FFFFFF",
+  card: "#F8FAFC",
   text: "#000000",
-  textSecondary: "#666666",
-  textMuted: "#999999",
-  border: "#EBEBEB",
-  activeBackground: "rgba(0,0,0,0.06)",
+  textSecondary: "#64748B",
+  textMuted: "#94A3B8",
+  border: "#E2E8F0",
 };
 
 export default function HomeScreen() {
@@ -158,10 +162,21 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* HEADER */}
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+      {/* HEADER NOIR */}
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        {/* Titre */}
+        <View style={styles.headerTop}>
+          <Text style={styles.headerTitle}>Découvrir</Text>
+          <Pressable 
+            style={styles.notificationButton}
+            onPress={() => router.push("/(app)/(shared)/notifications")}
+          >
+            <Ionicons name="notifications-outline" size={22} color={theme.white} />
+          </Pressable>
+        </View>
+
+        {/* Tabs */}
         <View style={styles.headerTabs}>
-          {/* Tab Inspiration */}
           <Pressable 
             onPress={() => setActiveTab("inspiration")}
             style={[
@@ -172,7 +187,7 @@ export default function HomeScreen() {
             <Ionicons 
               name={activeTab === "inspiration" ? "sparkles" : "sparkles-outline"} 
               size={18} 
-              color={activeTab === "inspiration" ? "#000" : "#999"} 
+              color={activeTab === "inspiration" ? theme.white : "rgba(255,255,255,0.5)"} 
             />
             <Text style={[
               styles.headerTabText,
@@ -182,7 +197,6 @@ export default function HomeScreen() {
             </Text>
           </Pressable>
 
-          {/* Tab Coiffeurs */}
           <Pressable 
             onPress={() => setActiveTab("recherche")}
             style={[
@@ -194,7 +208,7 @@ export default function HomeScreen() {
             <Ionicons 
               name={activeTab === "recherche" ? "location" : "location-outline"} 
               size={18} 
-              color={activeTab === "recherche" ? "#000" : "#999"} 
+              color={activeTab === "recherche" ? theme.white : "rgba(255,255,255,0.5)"} 
             />
             <Text 
               style={[
@@ -215,7 +229,7 @@ export default function HomeScreen() {
               hasActiveFilters && styles.filterButtonActive,
             ]}
           >
-            <Ionicons name="options-outline" size={20} color={hasActiveFilters ? "#000" : "#999"} />
+            <Ionicons name="options-outline" size={20} color={theme.white} />
             {hasActiveFilters && (
               <View style={styles.filterBadge}>
                 <Text style={styles.filterBadgeText}>
@@ -227,136 +241,142 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* CONTENU */}
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={{ paddingTop: insets.top + 70 }}
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
-        {/* TAB INSPIRATION */}
-        {activeTab === "inspiration" && (
-          <>
-            {activeFilters.length > 0 && (
-              <View style={styles.filtersActive}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={styles.filtersRow}>
-                    {activeFilters.map((filter) => (
-                      <View key={filter} style={styles.filterChip}>
-                        <Text style={styles.filterChipText}>{filter}</Text>
-                        <Pressable onPress={() => toggleFilter(filter)}>
-                          <Ionicons name="close-circle" size={16} color="#666" />
-                        </Pressable>
-                      </View>
-                    ))}
-                    <Pressable onPress={() => setActiveFilters([])}>
-                      <Text style={styles.clearFilters}>Tout effacer</Text>
-                    </Pressable>
-                  </View>
-                </ScrollView>
-                <Text style={styles.resultsCount}>
-                  {filteredInspirations.length} résultat{filteredInspirations.length > 1 ? "s" : ""}
-                </Text>
-              </View>
-            )}
-            
-            <View style={styles.feed}>
-              {filteredInspirations.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Ionicons name="images-outline" size={60} color="#DDD" />
-                  <Text style={styles.emptyStateText}>Aucune inspiration trouvée</Text>
-                </View>
-              ) : (
-                <View style={styles.masonry}>
-                  <View style={styles.masonryColumn}>
-                    {leftColumn.map((item) => (
-                      <InspirationCard 
-                        key={item.id} 
-                        item={item} 
-                        onPress={() => handleInspirationPress(item)} 
-                      />
-                    ))}
-                  </View>
-                  <View style={[styles.masonryColumn, { marginTop: 24 }]}>
-                    {rightColumn.map((item) => (
-                      <InspirationCard 
-                        key={item.id} 
-                        item={item} 
-                        onPress={() => handleInspirationPress(item)} 
-                      />
-                    ))}
-                  </View>
+      {/* CONTENU BLANC ARRONDI */}
+      <View style={styles.content}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={{ paddingTop: 20, paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
+          {/* TAB INSPIRATION */}
+          {activeTab === "inspiration" && (
+            <>
+              {activeFilters.length > 0 && (
+                <View style={styles.filtersActive}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={styles.filtersRow}>
+                      {activeFilters.map((filter) => (
+                        <View key={filter} style={styles.filterChip}>
+                          <Text style={styles.filterChipText}>{filter}</Text>
+                          <Pressable onPress={() => toggleFilter(filter)}>
+                            <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
+                          </Pressable>
+                        </View>
+                      ))}
+                      <Pressable onPress={() => setActiveFilters([])}>
+                        <Text style={styles.clearFilters}>Tout effacer</Text>
+                      </Pressable>
+                    </View>
+                  </ScrollView>
+                  <Text style={styles.resultsCount}>
+                    {filteredInspirations.length} résultat{filteredInspirations.length > 1 ? "s" : ""}
+                  </Text>
                 </View>
               )}
-            </View>
-          </>
-        )}
-
-        {/* TAB COIFFEURS */}
-        {activeTab === "recherche" && (
-          <>
-            <View style={styles.searchContainer}>
-              <View style={styles.searchInput}>
-                <Ionicons name="search" size={18} color="#999" />
-                <TextInput
-                  value={search}
-                  onChangeText={setSearch}
-                  placeholder="Rechercher salon, coiffeur, ville..."
-                  placeholderTextColor="#999"
-                  style={styles.searchTextInput}
-                />
-                {search.length > 0 && (
-                  <Pressable onPress={() => setSearch("")}>
-                    <Ionicons name="close-circle" size={18} color="#999" />
-                  </Pressable>
+              
+              <View style={styles.feed}>
+                {filteredInspirations.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <View style={styles.emptyIconContainer}>
+                      <Ionicons name="images-outline" size={48} color={theme.textMuted} />
+                    </View>
+                    <Text style={styles.emptyTitle}>Aucune inspiration</Text>
+                    <Text style={styles.emptySubtitle}>Essayez de modifier vos filtres</Text>
+                  </View>
+                ) : (
+                  <View style={styles.masonry}>
+                    <View style={styles.masonryColumn}>
+                      {leftColumn.map((item) => (
+                        <InspirationCard 
+                          key={item.id} 
+                          item={item} 
+                          onPress={() => handleInspirationPress(item)} 
+                        />
+                      ))}
+                    </View>
+                    <View style={[styles.masonryColumn, { marginTop: 24 }]}>
+                      {rightColumn.map((item) => (
+                        <InspirationCard 
+                          key={item.id} 
+                          item={item} 
+                          onPress={() => handleInspirationPress(item)} 
+                        />
+                      ))}
+                    </View>
+                  </View>
                 )}
               </View>
-            </View>
-            
-            {activeSearchFilters.length > 0 && (
-              <View style={styles.filtersActive}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={styles.filtersRow}>
-                    {activeSearchFilters.map((filter) => (
-                      <View key={filter} style={styles.filterChip}>
-                        <Text style={styles.filterChipText}>{filter}</Text>
-                        <Pressable onPress={() => toggleFilter(filter)}>
-                          <Ionicons name="close-circle" size={16} color="#666" />
-                        </Pressable>
-                      </View>
-                    ))}
-                    <Pressable onPress={() => setActiveSearchFilters([])}>
-                      <Text style={styles.clearFilters}>Tout effacer</Text>
-                    </Pressable>
-                  </View>
-                </ScrollView>
-              </View>
-            )}
-            
-            <View style={styles.coiffeursList}>
-              {filteredCoiffeurs.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Ionicons name="search-outline" size={60} color="#DDD" />
-                  <Text style={styles.emptyStateText}>Aucun coiffeur trouvé</Text>
-                </View>
-              ) : (
-                <>
-                  {filteredCoiffeurs.map((item) => (
-                    <CoiffeurCard 
-                      key={item.id} 
-                      item={item} 
-                      onPress={() => router.push(`/coiffeur/${item.id}`)} 
-                    />
-                  ))}
-                </>
-              )}
-            </View>
-          </>
-        )}
+            </>
+          )}
 
-        <View style={{ height: 100 }} />
-      </ScrollView>
+          {/* TAB COIFFEURS */}
+          {activeTab === "recherche" && (
+            <>
+              <View style={styles.searchContainer}>
+                <View style={styles.searchInput}>
+                  <Ionicons name="search" size={18} color={theme.textMuted} />
+                  <TextInput
+                    value={search}
+                    onChangeText={setSearch}
+                    placeholder="Rechercher salon, coiffeur, ville..."
+                    placeholderTextColor={theme.textMuted}
+                    style={styles.searchTextInput}
+                  />
+                  {search.length > 0 && (
+                    <Pressable onPress={() => setSearch("")}>
+                      <Ionicons name="close-circle" size={18} color={theme.textMuted} />
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+              
+              {activeSearchFilters.length > 0 && (
+                <View style={styles.filtersActive}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={styles.filtersRow}>
+                      {activeSearchFilters.map((filter) => (
+                        <View key={filter} style={styles.filterChip}>
+                          <Text style={styles.filterChipText}>{filter}</Text>
+                          <Pressable onPress={() => toggleFilter(filter)}>
+                            <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
+                          </Pressable>
+                        </View>
+                      ))}
+                      <Pressable onPress={() => setActiveSearchFilters([])}>
+                        <Text style={styles.clearFilters}>Tout effacer</Text>
+                      </Pressable>
+                    </View>
+                  </ScrollView>
+                </View>
+              )}
+              
+              <View style={styles.coiffeursList}>
+                {filteredCoiffeurs.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <View style={styles.emptyIconContainer}>
+                      <Ionicons name="search-outline" size={48} color={theme.textMuted} />
+                    </View>
+                    <Text style={styles.emptyTitle}>Aucun coiffeur trouvé</Text>
+                    <Text style={styles.emptySubtitle}>Essayez une autre recherche</Text>
+                  </View>
+                ) : (
+                  <>
+                    {filteredCoiffeurs.map((item) => (
+                      <CoiffeurCard 
+                        key={item.id} 
+                        item={item} 
+                        onPress={() => router.push(`/coiffeur/${item.id}`)} 
+                      />
+                    ))}
+                  </>
+                )}
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </View>
 
       {/* MODAL FILTRES */}
       <Modal visible={filterModalVisible} transparent animationType="fade">
@@ -385,17 +405,17 @@ export default function HomeScreen() {
                 </View>
                 
                 <View style={styles.modalSearchInput}>
-                  <Ionicons name="search" size={18} color="#999" />
+                  <Ionicons name="search" size={18} color={theme.textMuted} />
                   <TextInput
                     value={filterSearch}
                     onChangeText={setFilterSearch}
                     placeholder="Rechercher un filtre..."
-                    placeholderTextColor="#999"
+                    placeholderTextColor={theme.textMuted}
                     style={styles.modalSearchTextInput}
                   />
                   {filterSearch.length > 0 && (
                     <Pressable onPress={() => setFilterSearch("")}>
-                      <Ionicons name="close-circle" size={18} color="#999" />
+                      <Ionicons name="close-circle" size={18} color={theme.textMuted} />
                     </Pressable>
                   )}
                 </View>
@@ -498,23 +518,42 @@ export default function HomeScreen() {
   );
 }
 
+// ============================================
+// STYLES
+// ============================================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.black,
   },
   
-  // Header
+  // Header noir
   header: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 12,
-    paddingBottom: 12,
+    backgroundColor: theme.black,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: theme.white,
+  },
+  notificationButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  
+  // Header Tabs
   headerTabs: {
     flexDirection: "row",
     alignItems: "center",
@@ -526,23 +565,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 10,
     paddingHorizontal: 14,
-    borderRadius: 25,
-    backgroundColor: "transparent",
+    borderRadius: 20,
     gap: 6,
   },
   headerTabLarge: {
     flex: 1,
   },
   headerTabActive: {
-    backgroundColor: "#F0F0F0",
+    backgroundColor: "rgba(255,255,255,0.15)",
   },
   headerTabText: {
     fontSize: 14,
-    color: "#999",
     fontWeight: "500",
+    color: "rgba(255,255,255,0.5)",
   },
   headerTabTextActive: {
-    color: "#000",
+    color: theme.white,
     fontWeight: "600",
   },
   filterButton: {
@@ -553,7 +591,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   filterButtonActive: {
-    backgroundColor: "#F0F0F0",
+    backgroundColor: "rgba(255,255,255,0.15)",
   },
   filterBadge: {
     position: "absolute",
@@ -562,17 +600,23 @@ const styles = StyleSheet.create({
     minWidth: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: "#000",
+    backgroundColor: theme.white,
     alignItems: "center",
     justifyContent: "center",
   },
   filterBadgeText: {
-    color: "#FFF",
+    color: theme.black,
     fontSize: 9,
     fontWeight: "bold",
   },
   
-  // Scroll
+  // Content blanc arrondi
+  content: {
+    flex: 1,
+    backgroundColor: theme.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+  },
   scrollView: {
     flex: 1,
   },
@@ -590,7 +634,7 @@ const styles = StyleSheet.create({
   filterChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F5F5F5",
+    backgroundColor: theme.card,
     paddingVertical: 6,
     paddingLeft: 12,
     paddingRight: 8,
@@ -598,21 +642,21 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   filterChipText: {
-    color: "#000",
+    color: theme.text,
     fontSize: 13,
   },
   clearFilters: {
-    color: "#999",
+    color: theme.textMuted,
     fontSize: 12,
     paddingHorizontal: 8,
   },
   resultsCount: {
-    color: "#999",
+    color: theme.textMuted,
     fontSize: 12,
     marginTop: 6,
   },
   
-  // Feed
+  // Feed Masonry
   feed: {
     paddingHorizontal: 12,
   },
@@ -624,38 +668,55 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   
-  // Empty state
+  // Empty State
   emptyState: {
     alignItems: "center",
-    marginTop: 60,
+    paddingVertical: 60,
+    paddingHorizontal: 32,
   },
-  emptyStateText: {
-    color: "#999",
-    marginTop: 16,
-    fontSize: 16,
+  emptyIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: theme.card,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: theme.text,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: theme.textMuted,
+    textAlign: "center",
   },
   
   // Search
   searchContainer: {
     paddingHorizontal: 16,
-    marginBottom: 8,
+    marginBottom: 16,
   },
   searchInput: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F5F5F5",
-    borderRadius: 12,
+    backgroundColor: theme.card,
+    borderRadius: 14,
     paddingHorizontal: 14,
+    height: 48,
   },
   searchTextInput: {
     flex: 1,
-    color: "#000",
+    color: theme.text,
     paddingVertical: 12,
     paddingHorizontal: 10,
     fontSize: 15,
   },
   
-  // Coiffeurs
+  // Coiffeurs list
   coiffeursList: {
     paddingHorizontal: 16,
   },
@@ -663,11 +724,11 @@ const styles = StyleSheet.create({
   // Modal
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#FFF",
+    backgroundColor: theme.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: height * 0.7,
@@ -675,7 +736,7 @@ const styles = StyleSheet.create({
   modalHandle: {
     width: 40,
     height: 4,
-    backgroundColor: "#DDD",
+    backgroundColor: theme.border,
     borderRadius: 2,
     alignSelf: "center",
     marginTop: 12,
@@ -691,25 +752,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalTitle: {
-    color: "#000",
+    color: theme.text,
     fontSize: 18,
     fontWeight: "600",
   },
   modalSubtitle: {
-    color: "#666",
+    color: theme.textMuted,
     fontSize: 13,
   },
   modalSearchInput: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F5F5F5",
+    backgroundColor: theme.card,
     borderRadius: 12,
     paddingHorizontal: 12,
     marginBottom: 16,
   },
   modalSearchTextInput: {
     flex: 1,
-    color: "#000",
+    color: theme.text,
     paddingVertical: 12,
     paddingHorizontal: 10,
     fontSize: 15,
@@ -728,31 +789,31 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: theme.card,
     gap: 8,
   },
   modalFilterItemSelected: {
-    backgroundColor: "#000",
+    backgroundColor: theme.black,
   },
   checkbox: {
     width: 20,
     height: 20,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: "#CCC",
+    borderColor: theme.border,
     alignItems: "center",
     justifyContent: "center",
   },
   checkboxSelected: {
-    backgroundColor: "#000",
-    borderColor: "#000",
+    backgroundColor: theme.black,
+    borderColor: theme.black,
   },
   modalFilterText: {
     fontSize: 14,
-    color: "#000",
+    color: theme.text,
   },
   modalFilterTextSelected: {
-    color: "#FFF",
+    color: theme.white,
     fontWeight: "600",
   },
   modalActions: {
@@ -764,11 +825,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     alignItems: "center",
-    backgroundColor: "#F5F5F5",
+    backgroundColor: theme.card,
     borderRadius: 12,
   },
   modalResetText: {
-    color: "#666",
+    color: theme.textSecondary,
     fontWeight: "500",
     fontSize: 14,
   },
@@ -777,10 +838,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
     borderRadius: 12,
-    backgroundColor: "#000",
+    backgroundColor: theme.black,
   },
   modalApplyText: {
-    color: "#FFF",
+    color: theme.white,
     fontWeight: "600",
     fontSize: 14,
   },

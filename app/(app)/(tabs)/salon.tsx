@@ -10,9 +10,6 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   Dimensions,
-  LayoutAnimation,
-  Platform,
-  UIManager,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,20 +21,19 @@ import ProductModal from "@components/shared/ProductModal";
 import CartModal from "@components/shared/CartModal";
 import SuccessModal from "@components/shared/SuccessModal";
 
-// Activer LayoutAnimation sur Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
 const { width } = Dimensions.get("window");
 
+// ============================================
+// THEME - Style Premium (Header noir)
+// ============================================
 const theme = {
-  background: "#FFFFFF",
+  black: "#000000",
+  white: "#FFFFFF",
+  card: "#F8FAFC",
   text: "#000000",
-  textSecondary: "#666666",
-  textMuted: "#999999",
-  border: "#EBEBEB",
-  card: "#F8F8F8",
+  textSecondary: "#64748B",
+  textMuted: "#94A3B8",
+  border: "#E2E8F0",
 };
 
 // Mock Data - Produits
@@ -187,8 +183,6 @@ const SALONS = [
 ];
 
 type TabType = "salons" | "produits";
-
-// Types pour les modals
 type SalonType = typeof SALONS[0];
 type ProductType = typeof PRODUCTS[0];
 
@@ -196,10 +190,9 @@ export default function BoutiqueScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { setIsScrolling } = useScrollContext();
-  const { addToCart, cartItems, cartCount, cartTotal, updateQuantity, removeItem, clearCart } = useCartContext();
+  const { addToCart, cartItems, cartCount, updateQuantity, removeItem, clearCart } = useCartContext();
   const [activeTab, setActiveTab] = useState<TabType>("salons");
   const [search, setSearch] = useState("");
-  const [showSearch, setShowSearch] = useState(true);
   
   // States pour les modals
   const [selectedSalon, setSelectedSalon] = useState<SalonType | null>(null);
@@ -276,34 +269,18 @@ export default function BoutiqueScreen() {
     
     if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
     
-    // Gestion de la tab bar
     if (isGoingDown && currentY > 30) {
       setIsScrolling(true);
     } else if (isGoingUp) {
       setIsScrolling(false);
     }
     
-    // Gestion de la barre de recherche avec LayoutAnimation
-    if (isGoingDown && currentY > 60 && showSearch) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setShowSearch(false);
-    } else if (isGoingUp && currentY < lastScrollY.current - 15 && !showSearch) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setShowSearch(true);
-    }
-    
-    // Reset au top
-    if (currentY <= 10 && !showSearch) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setShowSearch(true);
-    }
-    
     scrollTimeout.current = setTimeout(() => setIsScrolling(false), 800);
     lastScrollY.current = currentY;
   };
 
-  // Render Product Card - Layout fixe
-  const renderProductCard = (item: typeof PRODUCTS[0]) => (
+  // Render Product Card
+  const renderProductCard = (item: ProductType) => (
     <Pressable 
       key={item.id} 
       style={styles.productCard}
@@ -311,7 +288,6 @@ export default function BoutiqueScreen() {
     >
       <Image source={{ uri: item.image }} style={styles.productImage} />
       
-      {/* Badge livraison */}
       {item.offersDelivery && (
         <View style={styles.deliveryBadge}>
           <Ionicons name="bicycle" size={10} color="#FFF" />
@@ -319,7 +295,6 @@ export default function BoutiqueScreen() {
       )}
       
       <View style={styles.productContent}>
-        {/* Zone info - hauteur fixe */}
         <View style={styles.productInfo}>
           <Text style={styles.productBrand}>{item.brand}</Text>
           <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
@@ -331,7 +306,6 @@ export default function BoutiqueScreen() {
           </View>
         </View>
         
-        {/* Zone prix + bouton - toujours en bas */}
         <View style={styles.productFooter}>
           <View style={styles.productPriceRow}>
             <Text style={styles.productPrice}>{item.price}€</Text>
@@ -354,7 +328,7 @@ export default function BoutiqueScreen() {
   );
 
   // Render Salon Card
-  const renderSalonCard = (item: typeof SALONS[0]) => (
+  const renderSalonCard = (item: SalonType) => (
     <Pressable 
       key={item.id} 
       style={styles.salonCard}
@@ -386,7 +360,6 @@ export default function BoutiqueScreen() {
           <Text style={styles.priceRange}>{item.priceRange}</Text>
         </View>
 
-        {/* Badges Lieu */}
         <View style={styles.locationBadges}>
           {item.offersSalonService && (
             <View style={styles.locationBadge}>
@@ -396,7 +369,7 @@ export default function BoutiqueScreen() {
           )}
           {item.offersHomeService && (
             <View style={[styles.locationBadge, styles.locationBadgeHome]}>
-              <Ionicons name="home" size={12} color={theme.text} />
+              <Ionicons name="home" size={12} color="#FFF" />
               <Text style={[styles.locationBadgeText, styles.locationBadgeHomeText]}>
                 À domicile
               </Text>
@@ -423,23 +396,18 @@ export default function BoutiqueScreen() {
     </Pressable>
   );
 
-  const headerHeight = insets.top + 8;
-  const headerTotalHeight = headerHeight + (showSearch ? 160 : 90);
-
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: headerHeight }]}>
+      {/* HEADER NOIR */}
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         {/* Titre + Panier */}
         <View style={styles.headerTop}>
-          <Text style={styles.pageTitle}>Boutique</Text>
-          
-          {/* Bouton Panier */}
+          <Text style={styles.headerTitle}>Boutique</Text>
           <Pressable 
             style={styles.cartButton}
             onPress={() => setCartModalVisible(true)}
           >
-            <Ionicons name="cart-outline" size={24} color={theme.text} />
+            <Ionicons name="cart-outline" size={24} color={theme.white} />
             {cartCount > 0 && (
               <View style={styles.cartBadge}>
                 <Text style={styles.cartBadgeText}>{cartCount > 9 ? "9+" : cartCount}</Text>
@@ -448,30 +416,28 @@ export default function BoutiqueScreen() {
           </Pressable>
         </View>
 
-        {/* Search Bar - Conditionnelle */}
-        {showSearch && (
-          <View style={styles.searchContainer}>
-            <View style={styles.searchInput}>
-              <Ionicons name="search" size={18} color={theme.textMuted} />
-              <TextInput
-                value={search}
-                onChangeText={setSearch}
-                placeholder={
-                  activeTab === "salons"
-                    ? "Rechercher un salon..."
-                    : "Rechercher un produit..."
-                }
-                placeholderTextColor={theme.textMuted}
-                style={styles.searchTextInput}
-              />
-              {search.length > 0 && (
-                <Pressable onPress={() => setSearch("")}>
-                  <Ionicons name="close-circle" size={18} color={theme.textMuted} />
-                </Pressable>
-              )}
-            </View>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInput}>
+            <Ionicons name="search" size={18} color="rgba(255,255,255,0.5)" />
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder={
+                activeTab === "salons"
+                  ? "Rechercher un salon..."
+                  : "Rechercher un produit..."
+              }
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              style={styles.searchTextInput}
+            />
+            {search.length > 0 && (
+              <Pressable onPress={() => setSearch("")}>
+                <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.5)" />
+              </Pressable>
+            )}
           </View>
-        )}
+        </View>
 
         {/* Tabs */}
         <View style={styles.tabsContainer}>
@@ -482,7 +448,7 @@ export default function BoutiqueScreen() {
             <Ionicons 
               name="storefront-outline" 
               size={16} 
-              color={activeTab === "salons" ? "#FFF" : theme.textMuted} 
+              color={activeTab === "salons" ? theme.white : "rgba(255,255,255,0.5)"} 
             />
             <Text style={[styles.tabText, activeTab === "salons" && styles.tabTextActive]}>
               Salons
@@ -496,7 +462,7 @@ export default function BoutiqueScreen() {
             <Ionicons 
               name="basket-outline" 
               size={16} 
-              color={activeTab === "produits" ? "#FFF" : theme.textMuted} 
+              color={activeTab === "produits" ? theme.white : "rgba(255,255,255,0.5)"} 
             />
             <Text style={[styles.tabText, activeTab === "produits" && styles.tabTextActive]}>
               Produits
@@ -505,32 +471,32 @@ export default function BoutiqueScreen() {
         </View>
       </View>
 
-      {/* Content */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={{ paddingTop: headerTotalHeight }}
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
-        {/* Salons Tab */}
-        {activeTab === "salons" && (
-          <View style={styles.listContainer}>
-            {SALONS.map(renderSalonCard)}
-          </View>
-        )}
-
-        {/* Produits Tab */}
-        {activeTab === "produits" && (
-          <View style={styles.listContainer}>
-            <View style={styles.productsGrid}>
-              {PRODUCTS.map(renderProductCard)}
+      {/* CONTENU BLANC ARRONDI */}
+      <View style={styles.content}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={{ paddingTop: 20, paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
+          {/* Salons Tab */}
+          {activeTab === "salons" && (
+            <View style={styles.listContainer}>
+              {SALONS.map(renderSalonCard)}
             </View>
-          </View>
-        )}
+          )}
 
-        <View style={{ height: 120 }} />
-      </ScrollView>
+          {/* Produits Tab */}
+          {activeTab === "produits" && (
+            <View style={styles.listContainer}>
+              <View style={styles.productsGrid}>
+                {PRODUCTS.map(renderProductCard)}
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      </View>
 
       {/* Modals */}
       <SalonModal
@@ -590,47 +556,45 @@ export default function BoutiqueScreen() {
   );
 }
 
+// ============================================
+// STYLES
+// ============================================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.background,
+    backgroundColor: theme.black,
   },
   
-  // Header
+  // Header noir
   header: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
-    backgroundColor: theme.background,
+    backgroundColor: theme.black,
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingBottom: 20,
   },
   headerTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  pageTitle: {
-    fontSize: 32,
+  headerTitle: {
+    fontSize: 28,
     fontWeight: "bold",
-    color: theme.text,
+    color: theme.white,
   },
   cartButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: theme.card,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
   },
   cartBadge: {
     position: "absolute",
-    top: 6,
-    right: 6,
+    top: 4,
+    right: 4,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
@@ -647,19 +611,19 @@ const styles = StyleSheet.create({
   
   // Search
   searchContainer: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   searchInput: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.card,
-    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 14,
     paddingHorizontal: 14,
     height: 48,
   },
   searchTextInput: {
     flex: 1,
-    color: theme.text,
+    color: theme.white,
     paddingVertical: 12,
     paddingHorizontal: 10,
     fontSize: 15,
@@ -677,21 +641,27 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: theme.card,
   },
   tabActive: {
-    backgroundColor: theme.text,
+    backgroundColor: "rgba(255,255,255,0.15)",
   },
   tabText: {
     fontSize: 14,
     fontWeight: "500",
-    color: theme.textMuted,
+    color: "rgba(255,255,255,0.5)",
   },
   tabTextActive: {
-    color: "#FFF",
+    color: theme.white,
+    fontWeight: "600",
   },
   
-  // Scroll
+  // Content blanc arrondi
+  content: {
+    flex: 1,
+    backgroundColor: theme.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+  },
   scrollView: {
     flex: 1,
   },
@@ -699,7 +669,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   
-  // Product Card - Refonte avec layout fixe
+  // Product Card
   productsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -719,7 +689,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     right: 8,
-    backgroundColor: theme.text,
+    backgroundColor: theme.black,
     width: 22,
     height: 22,
     borderRadius: 11,
@@ -784,7 +754,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: theme.text,
+    backgroundColor: theme.black,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -883,13 +853,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: theme.background,
+    backgroundColor: theme.white,
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
   },
   locationBadgeHome: {
-    backgroundColor: theme.text,
+    backgroundColor: theme.black,
   },
   locationBadgeText: {
     fontSize: 12,
@@ -914,7 +884,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   serviceTag: {
-    backgroundColor: theme.background,
+    backgroundColor: theme.white,
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 8,
@@ -930,7 +900,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: theme.background,
+    backgroundColor: theme.white,
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
