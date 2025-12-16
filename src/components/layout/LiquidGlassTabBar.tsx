@@ -21,7 +21,7 @@ interface LiquidGlassTabBarProps {
 
 const TABS: TabItem[] = [
   { name: "index", label: "Accueil", icon: "home-outline", iconFocused: "home" },
-  { name: "salon", label: "Salon", icon: "storefront-outline", iconFocused: "storefront" },
+  { name: "salon", label: "Boutique", icon: "storefront-outline", iconFocused: "storefront" },
   { name: "activity", label: "Activité", icon: "pulse-outline", iconFocused: "pulse" },
   { name: "profile", label: "Profil", icon: "person-outline", iconFocused: "person" },
 ];

@@ -46,11 +46,25 @@ interface InspirationItem {
   description?: string;
 }
 
+// Type pour les données de succès
+interface SuccessData {
+  title: string;
+  subtitle: string;
+  recapImage?: string;
+  recapTitle?: string;
+  recapSubtitle?: string;
+  recapItems?: { icon: string; text: string }[];
+  priceLabel?: string;
+  priceValue?: string;
+  buttonText?: string;
+}
+
 interface InspirationModalProps {
   visible: boolean;
   item: InspirationItem | null;
   onClose: () => void;
   onBook: () => void;
+  onSuccess?: (data: SuccessData) => void;
 }
 
 // Types pour les commentaires avec réponses
@@ -261,7 +275,7 @@ function ReplyItem({ reply, onLike, onReply, onDelete, onReport, showMenu, onTog
   );
 }
 
-export default function InspirationModal({ visible, item, onClose, onBook }: InspirationModalProps) {
+export default function InspirationModal({ visible, item, onClose, onBook, onSuccess }: InspirationModalProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { setCurrentBooking, confirmBooking } = useBookingStore();
@@ -286,8 +300,7 @@ export default function InspirationModal({ visible, item, onClose, onBook }: Ins
   } | null>(null);
   const [expandedReplies, setExpandedReplies] = useState<string[]>([]);
   
-  // États pour la modal de succès
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  // États pour le paiement
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<"card" | "apple" | "google">("card");
   const [selectedLocation, setSelectedLocation] = useState<"salon" | "domicile">(
@@ -306,73 +319,9 @@ export default function InspirationModal({ visible, item, onClose, onBook }: Ins
   const slideAnim = useRef(new Animated.Value(height)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
   
-  // Animations pour la modal de succès
-  const successSlideAnim = useRef(new Animated.Value(height)).current;
-  const successBackdropAnim = useRef(new Animated.Value(0)).current;
-  
   // Swipe gesture
   const panY = useRef(new Animated.Value(0)).current;
   const lastGestureY = useRef(0);
-
-  // PanResponder pour la modal de succès
-  const successPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 5,
-      onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dy > 0) {
-          successSlideAnim.setValue(gestureState.dy);
-        }
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 100 || gestureState.vy > 0.5) {
-          closeSuccessModal();
-        } else {
-          Animated.spring(successSlideAnim, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
-        }
-      },
-    })
-  ).current;
-
-  // Ouvrir la modal de succès
-  const openSuccessModal = () => {
-    setShowSuccessModal(true);
-    Animated.parallel([
-      Animated.timing(successSlideAnim, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.timing(successBackdropAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  // Fermer la modal de succès
-  const closeSuccessModal = () => {
-    Animated.parallel([
-      Animated.timing(successSlideAnim, {
-        toValue: height,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(successBackdropAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setShowSuccessModal(false);
-      onClose();
-      router.replace("/(app)/(tabs)/activity");
-    });
-  };
 
   // Fonctions calendrier
   const getDaysInMonth = (date: Date) => {
@@ -563,6 +512,10 @@ export default function InspirationModal({ visible, item, onClose, onBook }: Ins
         ? selectedCalendarDate.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })
         : AVAILABLE_DATES[selectedDate].date;
       
+      // Calculer le prix
+      const fee = selectedLocation === "domicile" ? COIFFEUR.homeServiceFee : 0;
+      const price = item.price + fee;
+      
       // Stocker la réservation dans le store
       setCurrentBooking({
         inspiration: {
@@ -571,7 +524,7 @@ export default function InspirationModal({ visible, item, onClose, onBook }: Ins
           image: item.image,
           category: item.category,
           duration: item.duration,
-          price: totalPrice, // Prix total avec frais éventuels
+          price: price,
         },
         coiffeur: {
           id: COIFFEUR.id,
@@ -583,14 +536,38 @@ export default function InspirationModal({ visible, item, onClose, onBook }: Ins
         date: dateDisplay,
         dateFormatted: dateFormatted,
         time: selectedTime,
-        location: selectedLocation, // Lieu du rendez-vous
+        location: selectedLocation,
       });
       
       // Simuler le paiement (2 sec)
       setTimeout(() => {
         confirmBooking();
         setIsProcessingPayment(false);
-        openSuccessModal();
+        
+        // Préparer les données de succès
+        const successData: SuccessData = {
+          title: "Réservation confirmée !",
+          subtitle: "Votre rendez-vous a été enregistré",
+          recapImage: COIFFEUR.image,
+          recapTitle: item.title,
+          recapSubtitle: `avec ${COIFFEUR.name}`,
+          recapItems: [
+            { icon: "calendar-outline", text: `${dateDisplay}, ${dateFormatted}` },
+            { icon: "time-outline", text: selectedTime },
+            { icon: selectedLocation === "salon" ? "storefront" : "home", text: selectedLocation === "salon" ? "En salon" : "À domicile" },
+          ],
+          priceLabel: "Total payé",
+          priceValue: `${price}€`,
+          buttonText: "Voir mes réservations",
+        };
+        
+        // Fermer la modale et appeler onSuccess
+        handleCloseWithAnimation();
+        setTimeout(() => {
+          if (onSuccess) {
+            onSuccess(successData);
+          }
+        }, 300);
       }, 2000);
     }
   };
@@ -1426,103 +1403,6 @@ export default function InspirationModal({ visible, item, onClose, onBook }: Ins
           </KeyboardAvoidingView>
         </Animated.View>
       </View>
-
-      {/* MODAL DE SUCCÈS - Identique à confirm.tsx */}
-      {showSuccessModal && (
-        <View style={styles.successModalOverlay}>
-          {/* Backdrop */}
-          <Animated.View 
-            style={[
-              styles.successBackdrop,
-              { opacity: successBackdropAnim }
-            ]}
-          >
-            <Pressable style={StyleSheet.absoluteFill} onPress={closeSuccessModal} />
-          </Animated.View>
-
-          {/* Card */}
-          <Animated.View 
-            style={[
-              styles.successCard,
-              { transform: [{ translateY: successSlideAnim }] }
-            ]}
-            {...successPanResponder.panHandlers}
-          >
-            {/* Drag Indicator */}
-            <View style={styles.dragIndicatorContainer}>
-              <View style={styles.dragIndicator} />
-            </View>
-
-            {/* Success Content */}
-            <View style={styles.successContent}>
-              <View style={styles.successIconContainer}>
-                <View style={styles.successIcon}>
-                  <Ionicons name="checkmark" size={40} color="#FFF" />
-                </View>
-              </View>
-
-              <Text style={styles.successTitle}>Réservation confirmée !</Text>
-              <Text style={styles.successSubtitle}>
-                Votre rendez-vous a bien été enregistré
-              </Text>
-
-              {/* Récap Card */}
-              {item && (
-                <View style={styles.successRecapCard}>
-                  <Image 
-                    source={{ uri: COIFFEUR.image }} 
-                    style={styles.successCoiffeurImage} 
-                  />
-                  <View style={styles.successRecapInfo}>
-                    <Text style={styles.successServiceName}>{item.title}</Text>
-                    <Text style={styles.successCoiffeurName}>avec {COIFFEUR.name}</Text>
-                    <View style={styles.successRecapMeta}>
-                      <View style={styles.successMetaItem}>
-                        <Ionicons name="calendar-outline" size={14} color={theme.textMuted} />
-                        <Text style={styles.successMetaText}>
-                          {selectedCalendarDate 
-                            ? selectedCalendarDate.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })
-                            : `${AVAILABLE_DATES[selectedDate].day} ${AVAILABLE_DATES[selectedDate].date}`
-                          }
-                        </Text>
-                      </View>
-                      <View style={styles.successMetaItem}>
-                        <Ionicons name="time-outline" size={14} color={theme.textMuted} />
-                        <Text style={styles.successMetaText}>{selectedTime}</Text>
-                      </View>
-                      <View style={styles.successMetaItem}>
-                        <Ionicons 
-                          name={selectedLocation === "salon" ? "storefront" : "home"} 
-                          size={14} 
-                          color={theme.textMuted} 
-                        />
-                        <Text style={styles.successMetaText}>
-                          {selectedLocation === "salon" ? "Salon" : "Domicile"}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              {/* Prix total */}
-              {item && (
-                <View style={styles.successPriceRow}>
-                  <Text style={styles.successPriceLabel}>Total payé</Text>
-                  <Text style={styles.successPriceValue}>{totalPrice}€</Text>
-                </View>
-              )}
-
-              {/* CTA */}
-              <Pressable style={styles.successButton} onPress={closeSuccessModal}>
-                <Text style={styles.successButtonText}>Voir mes réservations</Text>
-              </Pressable>
-
-              <Text style={styles.swipeHint}>Glissez vers le bas pour fermer</Text>
-            </View>
-          </Animated.View>
-        </View>
-      )}
 
       {/* MODAL CALENDRIER */}
       <Modal
@@ -2520,139 +2400,6 @@ const styles = StyleSheet.create({
   },
   selectTimeHintText: {
     fontSize: 14,
-    color: theme.textMuted,
-  },
-  
-  // Success Modal Styles (identique à confirm.tsx)
-  successModalOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "flex-end",
-    zIndex: 1000,
-  },
-  successBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  successCard: {
-    backgroundColor: theme.background,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    minHeight: height * 0.55,
-    paddingBottom: 40,
-  },
-  dragIndicatorContainer: {
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  dragIndicator: {
-    width: 40,
-    height: 4,
-    backgroundColor: theme.border,
-    borderRadius: 2,
-  },
-  successContent: {
-    paddingHorizontal: 24,
-    alignItems: "center",
-  },
-  successIconContainer: {
-    marginBottom: 20,
-  },
-  successIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: theme.success,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: theme.text,
-    marginBottom: 8,
-  },
-  successSubtitle: {
-    fontSize: 15,
-    color: theme.textMuted,
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  successRecapCard: {
-    flexDirection: "row",
-    backgroundColor: theme.card,
-    borderRadius: 16,
-    padding: 16,
-    width: "100%",
-    marginBottom: 20,
-  },
-  successCoiffeurImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-  },
-  successRecapInfo: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  successServiceName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.text,
-  },
-  successCoiffeurName: {
-    fontSize: 14,
-    color: theme.textSecondary,
-    marginTop: 2,
-  },
-  successRecapMeta: {
-    flexDirection: "row",
-    marginTop: 10,
-    gap: 16,
-  },
-  successMetaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  successMetaText: {
-    fontSize: 13,
-    color: theme.textMuted,
-  },
-  successPriceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    width: "100%",
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: theme.border,
-    marginBottom: 20,
-  },
-  successPriceLabel: {
-    fontSize: 15,
-    color: theme.textSecondary,
-  },
-  successPriceValue: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: theme.text,
-  },
-  successButton: {
-    backgroundColor: theme.text,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-    width: "100%",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  successButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFF",
-  },
-  swipeHint: {
-    fontSize: 12,
     color: theme.textMuted,
   },
   ctaLoadingContainer: {

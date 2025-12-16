@@ -18,6 +18,7 @@ import { useState, useMemo, useRef } from "react";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { InspirationCard, InspirationModal, CoiffeurCard } from "@shared";
+import SuccessModal from "@components/shared/SuccessModal";
 import { useScrollContext } from "./_layout";
 import { INSPIRATIONS, COIFFEURS, FILTERS, SEARCH_FILTERS } from "@constants/mockData";
 
@@ -47,6 +48,18 @@ export default function HomeScreen() {
   
   const [selectedInspiration, setSelectedInspiration] = useState<typeof INSPIRATIONS[0] | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [successData, setSuccessData] = useState<{
+    title: string;
+    subtitle: string;
+    recapImage?: string;
+    recapTitle?: string;
+    recapSubtitle?: string;
+    recapItems?: { icon: string; text: string }[];
+    priceLabel?: string;
+    priceValue?: string;
+    buttonText?: string;
+  }>({ title: "", subtitle: "" });
   
   const lastScrollY = useRef(0);
   const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -329,9 +342,6 @@ export default function HomeScreen() {
                 </View>
               ) : (
                 <>
-                  <Text style={styles.resultsCount}>
-                    {filteredCoiffeurs.length} coiffeur{filteredCoiffeurs.length > 1 ? "s" : ""} près de chez vous
-                  </Text>
                   {filteredCoiffeurs.map((item) => (
                     <CoiffeurCard 
                       key={item.id} 
@@ -462,6 +472,27 @@ export default function HomeScreen() {
         item={selectedInspiration}
         onClose={() => setModalVisible(false)}
         onBook={handleBook}
+        onSuccess={(data) => {
+          setModalVisible(false);
+          setSelectedInspiration(null);
+          setSuccessData(data);
+          setSuccessModalVisible(true);
+        }}
+      />
+
+      {/* SUCCESS MODAL */}
+      <SuccessModal
+        visible={successModalVisible}
+        onClose={() => setSuccessModalVisible(false)}
+        title={successData.title}
+        subtitle={successData.subtitle}
+        recapImage={successData.recapImage}
+        recapTitle={successData.recapTitle}
+        recapSubtitle={successData.recapSubtitle}
+        recapItems={successData.recapItems}
+        priceLabel={successData.priceLabel}
+        priceValue={successData.priceValue}
+        buttonText={successData.buttonText}
       />
     </View>
   );
